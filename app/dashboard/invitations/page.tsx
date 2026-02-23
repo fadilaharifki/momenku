@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Search,
   Filter,
@@ -11,10 +12,10 @@ import {
   Users,
   Eye,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-// Shadcn UI Components
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,13 +29,25 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useGetInvitations } from "@/hooks/api/useGetInvitations";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
+import { useDebounce } from "@/hooks/use-debounce";
 
 export default function InvitationsPage() {
   const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch] = useDebounce(searchTerm, 500);
+
+  const { data: response, isLoading } = useGetInvitations({
+    keyword: debouncedSearch,
+    limit: "all",
+  });
+
+  const invitations = response?.data || [];
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 font-poppins">
-      {/* Alert Banner menggunakan Shadcn Alert */}
       <Alert className="bg-primary/10 border-primary/20 rounded-2xl shadow-sm">
         <AlertCircle className="h-4 w-4 text-primary" />
         <AlertDescription className="text-sm font-semibold text-primary flex justify-between items-center w-full">
@@ -51,10 +64,9 @@ export default function InvitationsPage() {
         </AlertDescription>
       </Alert>
 
-      {/* Filter & Search Section */}
+      {/* Search Bar */}
       <div className="w-full">
         <div className="flex items-center gap-3 bg-card border border-border rounded-2xl px-4 py-2 w-full shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all">
-          {/* Label Filter */}
           <div className="flex items-center gap-2 border-r border-border pr-4 shrink-0">
             <Filter size={18} className="text-primary" />
             <span className="text-sm font-bold text-foreground hidden md:inline">
@@ -62,120 +74,172 @@ export default function InvitationsPage() {
             </span>
           </div>
 
-          {/* Input Pencarian Full Width */}
           <div className="relative flex-1">
             <Input
               type="text"
-              placeholder="Cari undangan Anda berdasarkan nama atau kategori..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Cari undangan Anda berdasarkan link atau judul..."
               className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 font-medium h-10 w-full pl-0 pr-10"
             />
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 p-2 bg-secondary/50 rounded-lg text-muted-foreground group-focus-within:text-primary transition-colors">
-              <Search size={18} />
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 p-2 rounded-lg text-muted-foreground transition-colors">
+              {isLoading ? (
+                <Loader2 size={18} className="animate-spin text-primary" />
+              ) : (
+                <Search size={18} />
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Invitation Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Card Undangan */}
-        <Card className="bg-card border-border hover:border-primary/40 hover:shadow-xl hover:shadow-primary/5 transition-all group relative overflow-hidden rounded-3xl">
-          <CardContent className="p-6">
-            {/* Decorative Accent */}
-            <div className="absolute top-0 right-0 w-16 h-16 bg-primary/5 rounded-bl-full -mr-8 -mt-8 group-hover:bg-primary/10 transition-colors" />
+        {/* Render List Undangan */}
+        {invitations.map((item) => (
+          <Card
+            key={item.id}
+            className="bg-card border-border hover:border-primary/40 hover:shadow-md transition-all group relative overflow-hidden rounded-2xl p-0" // Rounded dikecilkan ke 2xl
+          >
+            <CardContent className="p-2">
+              {" "}
+              {/* Padding dikurangi dari p-6 ke p-4 */}
+              <div className="absolute top-0 right-0 w-12 h-12 bg-primary/5 rounded-bl-full -mr-6 -mt-6 group-hover:bg-primary/10 transition-colors" />
+              <div className="flex items-center gap-4">
+                {" "}
+                {/* Start gap dikurangi */}
+                {/* Thumbnail Tema Lebih Kecil */}
+                <div className="h-12 w-12 rounded-xl bg-secondary overflow-hidden flex items-center justify-center shadow-inner shrink-0 border border-border">
+                  {item.cover_url ? (
+                    <img
+                      src={item.cover_url}
+                      alt={item.domain}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <ImageIcon
+                      size={20} // Ikon lebih kecil
+                      className="text-muted-foreground"
+                      strokeWidth={1.5}
+                    />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-foreground text-base tracking-tight truncate group-hover:text-primary transition-colors">
+                    {item.heading || item.domain}
+                  </h3>
 
-            <div className="flex items-start gap-5">
-              {/* Thumbnail */}
-              <div className="h-16 w-16 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-all duration-300 shadow-inner shrink-0">
-                <ImageIcon size={28} strokeWidth={1.5} />
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-foreground text-lg tracking-tight truncate group-hover:text-primary transition-colors">
-                  Undangan Pernikahan
-                </h3>
-                <p className="text-[11px] font-bold text-muted-foreground mt-1 tracking-widest uppercase italic">
-                  21 Februari 2026
-                </p>
-
-                <div className="flex flex-wrap items-center gap-2 mt-4">
-                  <Badge
-                    variant="secondary"
-                    className="bg-primary/10 text-primary border-0 text-[10px] font-extrabold px-2 py-0.5"
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-[10px] font-bold text-muted-foreground tracking-wider uppercase italic">
+                      {format(new Date(item.created_at), "dd MMM yyyy", {
+                        locale: id,
+                      })}
+                    </p>
+                    <span className="text-muted-foreground/30">•</span>
+                    <Badge
+                      className={`${item.is_active ? "text-accent" : "text-muted-foreground"} bg-transparent p-0 border-0 text-[9px] font-black uppercase`}
+                    >
+                      {item.is_active ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground shrink-0"
+                    >
+                      <MoreVertical size={18} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="rounded-xl w-44 font-poppins"
                   >
-                    BABY ELEPHANT
-                  </Badge>
-                  <Badge className="bg-accent/10 text-accent border-0 text-[10px] font-extrabold px-2 py-0.5 hover:bg-accent/20">
-                    ACTIVE
+                    <DropdownMenuItem
+                      onClick={() => window.open(`/${item.domain}`, "_blank")}
+                      className="gap-2 cursor-pointer text-sm py-2"
+                    >
+                      <Eye size={14} /> Lihat
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        router.push(`/dashboard/invitations/${item.id}`)
+                      }
+                      className="gap-2 cursor-pointer text-sm py-2"
+                    >
+                      <Pencil size={14} /> Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="gap-2 cursor-pointer text-sm py-2 text-red-500">
+                      <Trash2 size={14} /> Hapus
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div className="mt-4 flex flex-col gap-2">
+                {" "}
+                {/* Link ditaruh di atas tombol */}
+                <div className="bg-secondary/30 rounded-lg px-3 py-1.5 flex items-center justify-between border border-border/50">
+                  <span className="text-[10px] font-medium text-muted-foreground truncate">
+                    momenku.com/{item.domain}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="text-[8px] h-4 px-1.5 uppercase font-bold border-primary/20 text-primary"
+                  >
+                    Link
                   </Badge>
                 </div>
-              </div>
-
-              {/* Dropdown Menu Shadcn */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+                <div className="flex gap-2">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground"
+                    onClick={() =>
+                      router.push(`/dashboard/invitations/${item.id}`)
+                    }
+                    variant="secondary"
+                    className="flex-1 hover:bg-accent text-[10px] font-bold rounded-lg gap-2"
                   >
-                    <MoreVertical size={20} />
+                    <Pencil size={12} /> Edit Desain
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="rounded-xl w-48 font-poppins"
-                >
-                  <DropdownMenuLabel className="text-[10px] font-bold tracking-widest uppercase text-muted-foreground">
-                    Opsi Undangan
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="gap-2 cursor-pointer font-semibold py-2">
-                    <Eye size={16} /> Lihat Undangan
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2 cursor-pointer font-semibold py-2">
-                    <Pencil size={16} /> Edit Detail
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="gap-2 cursor-pointer font-semibold py-2 text-red-500 focus:text-red-500">
-                    <Trash2 size={16} /> Hapus Undangan
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                  <Button
+                    variant="outline"
+                    className="flex-1 text-[10px] font-bold rounded-lg gap-2 border-border"
+                  >
+                    <Users size={12} /> Tamu
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
 
-            {/* Quick Actions Buttons */}
-            <div className="mt-8 flex gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1 h-9 text-[11px] font-bold rounded-xl gap-2 transition-all hover:bg-primary hover:text-white"
-              >
-                <Pencil size={14} /> Edit Desain
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1 h-9 text-[11px] font-bold rounded-xl gap-2 border-border text-muted-foreground hover:bg-secondary"
-              >
-                <Users size={14} /> Lihat Tamu
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Empty State Card */}
-        <Card
-          className="group border-2 border-dashed border-border bg-transparent rounded-3xl hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer min-h-[220px]"
-          onClick={() => router.push("/#template")}
-        >
-          <CardContent className="h-full flex flex-col items-center justify-center p-6 gap-3">
-            <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center text-muted-foreground group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
-              <Plus size={24} />
-            </div>
-            <p className="text-sm font-bold text-muted-foreground group-hover:text-primary transition-colors">
-              Tambah Undangan Baru
-            </p>
-          </CardContent>
-        </Card>
+        {/* Add New Card (Selalu muncul di akhir) */}
+        {!isLoading && (
+          <Card
+            className="group border-2 border-dashed border-border bg-transparent rounded-3xl hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer"
+            onClick={() => router.push("/#template")}
+          >
+            <CardContent className="h-full flex flex-col items-center justify-center p-6 gap-3">
+              <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center text-muted-foreground group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
+                <Plus size={24} />
+              </div>
+              <p className="text-sm font-bold text-muted-foreground group-hover:text-primary transition-colors">
+                Tambah Undangan Baru
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
+      {isLoading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="h-55 rounded-3xl bg-secondary/50 animate-pulse"
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

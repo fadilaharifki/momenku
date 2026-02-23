@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Trash2,
-  Wand2,
   Type,
   Palette,
   Type as FontSizeIcon,
   Save,
-  Sparkles,
   Bold,
   Italic,
+  Sparkles,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,49 +30,90 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Toggle } from "@/components/ui/toggle"; // Gunakan toggle shadcn jika ada
+import { InvitationSection } from "@/type/invitation";
+import axios from "axios";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useUpdateSection } from "@/hooks/api/useUpdateSection";
 
-export default function VisualLiveEditor() {
-  const [htmlBody, setHtmlBody] = useState(`
-    <div id="bride-section" class="p-12 text-center bg-[#fdfaf5] border-2 border-dashed border-primary/20 rounded-[2rem] shadow-sm font-poppins">
-      <h2 id="target-title" class="editable-element cursor-pointer hover:bg-primary/5 rounded-xl p-2 transition-all text-[#c9a84c] text-4xl mb-6 italic tracking-tight">The Bride</h2>
-      <div id="target-name" class="editable-element cursor-pointer hover:bg-primary/5 rounded-xl p-2 transition-all">
-        <h3 class="text-3xl font-black text-foreground">Bripda Lestari Puspita Sari</h3>
-      </div>
-      <div id="target-parents" class="editable-element cursor-pointer hover:bg-primary/5 rounded-xl p-2 mt-4 transition-all">
-        <p class="text-muted-foreground italic font-medium">Putri dari Bapak Zaifullah, SH dan Ibu Nur Aiyni. A. S.IP</p>
-      </div>
-    </div>
-  `);
+interface Props {
+  section: InvitationSection;
+  onClose?: () => void;
+}
 
+export default function VisualLiveEditor({ section, onClose }: Props) {
+  const queryClient = useQueryClient();
+
+  const { mutate, isPending: isLoading } = useUpdateSection(section.id);
+
+  // State Utama untuk HTML
+  const [htmlBody, setHtmlBody] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // States for Editing
+  // States untuk Form Editing
   const [editValue, setEditValue] = useState("");
-  const [fontSize, setFontSize] = useState("16px");
+  const [fontSize, setFontSize] = useState("");
   const [textColor, setTextColor] = useState("#000000");
   const [fontFamily, setFontFamily] = useState("Default");
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
 
+  /**
+   * Fungsi untuk menyuntikkan class & ID ke HTML mentah agar bisa diedit
+   */
+  const prepareHtml = (rawHtml: string) => {
+    if (!rawHtml) return "";
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(rawHtml, "text/html");
+
+    // Targetkan elemen yang mengandung teks
+    const elements = doc.querySelectorAll(
+      "h1, h2, h3, h4, h5, h6, p, span, b, i, div",
+    );
+
+    elements.forEach((el, index) => {
+      // Tambahkan class agar terdeteksi click handler
+      if (!el.classList.contains("editable-element")) {
+        el.classList.add("editable-element");
+      }
+      // Tambahkan ID unik jika belum ada (wajib untuk getElementById saat save)
+      if (!el.id) {
+        el.id = `el-${section.id.slice(0, 4)}-${index}`;
+      }
+    });
+
+    return doc.body.innerHTML;
+  };
+
+  // Sinkronisasi saat section berubah (pertama kali load)
+  useEffect(() => {
+    if (section?.body) {
+      setHtmlBody(prepareHtml(section.body));
+    }
+  }, [section]);
+
   const handleElementClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     const target = (e.target as HTMLElement).closest(
       ".editable-element",
     ) as HTMLElement;
+
     if (target) {
       setSelectedId(target.id);
       setEditValue(target.innerText.trim());
 
+      // Ambil Computed Style asli dari elemen
       const style = window.getComputedStyle(target);
       setFontSize(style.fontSize);
-
-      // Cek Bold & Italic
       setIsBold(
         style.fontWeight === "bold" || parseInt(style.fontWeight) >= 700,
       );
       setIsItalic(style.fontStyle === "italic");
 
+      // Konversi RGB ke HEX untuk input color
       const rgb = style.color;
       const hex =
         "#" +
@@ -80,117 +121,166 @@ export default function VisualLiveEditor() {
           .match(/\d+/g)
           ?.map((x) => parseInt(x).toString(16).padStart(2, "0"))
           .join("");
-      setTextColor(hex || "#000000");
 
+      setTextColor(hex || "#000000");
       setIsModalOpen(true);
     }
   };
 
-  const handleSave = () => {
+  const handleApplyChanges = () => {
     if (!selectedId) return;
+
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlBody, "text/html");
     const element = doc.getElementById(selectedId);
 
     if (element) {
+      // Update Konten (Support line breaks)
       element.innerHTML = editValue.replace(/\n/g, "<br />");
+
+      // Update Styling Inline
       element.style.fontSize = fontSize;
       element.style.color = textColor;
-
-      // Simpan Bold & Italic
       element.style.fontWeight = isBold ? "bold" : "normal";
       element.style.fontStyle = isItalic ? "italic" : "normal";
 
-      if (fontFamily !== "Default") element.style.fontFamily = fontFamily;
+      if (fontFamily !== "Default") {
+        element.style.fontFamily = fontFamily;
+      }
+
       setHtmlBody(doc.body.innerHTML);
     }
     setIsModalOpen(false);
   };
 
+  const handleSaveToDatabase = async () => {
+    // Tinggal panggil mutate dari hook
+    mutate(
+      { body: htmlBody },
+      {
+        onSuccess: () => {
+          if (onClose) onClose();
+        },
+      },
+    );
+  };
+
   return (
-    <div className="max-w-4xl mx-auto p-6 md:p-10 min-h-screen font-poppins">
-      {/* ... (Header tetap sama) ... */}
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Live Editor</h1>
-          <p className="text-sm text-muted-foreground">
-            Klik elemen untuk mengubah konten.
-          </p>
+    <div className="p-4 md:p-6 space-y-6">
+      {/* Action Header */}
+      <div className="flex items-center justify-between bg-white p-4 rounded-3xl border border-primary/10 shadow-sm sticky top-0 z-20">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-xl">
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-sm font-black uppercase tracking-tight">
+              Visual Editor
+            </h2>
+            <p className="text-[10px] text-muted-foreground font-medium">
+              Klik teks pada preview untuk mengedit
+            </p>
+          </div>
         </div>
-        <Button className="bg-primary hover:bg-primary/90 rounded-xl gap-2 shadow-lg shadow-primary/20">
-          <Save size={18} /> Simpan Draft
+        <Button
+          onClick={handleSaveToDatabase}
+          disabled={isLoading}
+          className="bg-primary hover:bg-primary/90 rounded-2xl gap-2 shadow-lg shadow-primary/20 px-6"
+        >
+          {isLoading ? (
+            <Loader2 className="animate-spin w-4 h-4" />
+          ) : (
+            <Save size={18} />
+          )}
+          {isLoading ? "Saving..." : "Simpan"}
         </Button>
       </div>
 
-      <div
-        className="relative shadow-2xl rounded-[2.5rem] overflow-hidden bg-white border-8 border-secondary p-1 cursor-default"
-        onClick={handleElementClick}
-        dangerouslySetInnerHTML={{ __html: htmlBody }}
-      />
+      {/* Mobile Preview Container */}
+      <div className="relative mx-auto max-w-95 min-h-[500px] shadow-2xl rounded-[3rem] overflow-hidden bg-white border-[12px] border-secondary p-1">
+        <div
+          className="preview-container h-full w-full overflow-y-auto scrollbar-hide p-4"
+          onClick={handleElementClick}
+          dangerouslySetInnerHTML={{ __html: htmlBody }}
+        />
+      </div>
+
+      {/* Editor Styles */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        .editable-element:hover { outline: 2px dashed #52735f !important; outline-offset: 4px; position: relative; }
-        .editable-element:hover::after { content: 'Klik untuk Edit'; position: absolute; top: -25px; right: 0; background: #52735f; color: white; font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        .editable-element { position: relative; transition: all 0.2s; cursor: pointer; }
+        .editable-element:hover { 
+          outline: 2px dashed #52735f !important; 
+          outline-offset: 4px; 
+          background-color: rgba(82, 115, 95, 0.05);
+        }
+        .editable-element:hover::after { 
+          content: 'KLIK UNTUK EDIT'; 
+          position: absolute; 
+          top: -22px; 
+          left: 50%; 
+          transform: translateX(-50%);
+          background: #52735f; 
+          color: white; 
+          font-size: 8px; 
+          padding: 2px 8px; 
+          border-radius: 4px; 
+          font-weight: 900;
+          z-index: 50;
+        }
       `,
         }}
       />
 
+      {/* Edit Dialog */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border-none rounded-[2rem]">
+        <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden border-none rounded-[2.5rem] shadow-2xl">
           <DialogHeader className="p-6 bg-secondary/30">
-            <DialogTitle className="text-lg font-black flex items-center gap-2 text-primary uppercase">
-              <Type className="w-5 h-5" /> Penyesuaian Elemen
+            <DialogTitle className="text-sm font-black flex items-center gap-2 text-primary uppercase tracking-widest">
+              <Type className="w-4 h-4" /> Sesuaikan Teks
             </DialogTitle>
           </DialogHeader>
 
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-5">
             <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Konten Teks
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                Konten
               </Label>
               <Textarea
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
-                className="min-h-[100px] rounded-2xl border-border bg-secondary/10 font-medium"
+                className="min-h-25 rounded-2xl border-none bg-secondary/20 font-medium focus-visible:ring-primary shadow-inner"
               />
             </div>
 
-            {/* Formatting Row (Bold & Italic) */}
-            <div className="space-y-2">
-              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Format Teks
-              </Label>
-              <div className="flex gap-2">
-                <Button
-                  variant={isBold ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setIsBold(!isBold)}
-                  className={`flex-1 rounded-xl font-bold gap-2 ${isBold ? "bg-primary text-white" : "border-border"}`}
-                >
-                  <Bold size={16} /> Bold
-                </Button>
-                <Button
-                  variant={isItalic ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setIsItalic(!isItalic)}
-                  className={`flex-1 rounded-xl font-bold gap-2 ${isItalic ? "bg-primary text-white" : "border-border italic"}`}
-                >
-                  <Italic size={16} /> Italic
-                </Button>
-              </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant={isBold ? "default" : "outline"}
+                onClick={() => setIsBold(!isBold)}
+                className={`rounded-2xl font-bold h-12 ${isBold ? "bg-primary text-white" : "bg-white"}`}
+              >
+                <Bold size={16} className="mr-2" /> Bold
+              </Button>
+              <Button
+                variant={isItalic ? "default" : "outline"}
+                onClick={() => setIsItalic(!isItalic)}
+                className={`rounded-2xl font-bold h-12 ${isItalic ? "bg-primary text-white italic" : "bg-white italic"}`}
+              >
+                <Italic size={16} className="mr-2" /> Italic
+              </Button>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Font Style
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                  Font
                 </Label>
                 <Select value={fontFamily} onValueChange={setFontFamily}>
-                  <SelectTrigger className="rounded-xl h-10 bg-secondary/20">
+                  <SelectTrigger className="rounded-2xl h-11 bg-secondary/20 border-none">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-xl">
+                  <SelectContent className="rounded-2xl">
                     <SelectItem value="Default">Modern Sans</SelectItem>
                     <SelectItem value="'Playfair Display', serif">
                       Luxury Serif
@@ -202,45 +292,39 @@ export default function VisualLiveEditor() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
                   Ukuran
                 </Label>
                 <div className="relative">
-                  <FontSizeIcon className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                  <FontSizeIcon className="absolute left-3 top-3.5 w-4 h-4 text-muted-foreground" />
                   <Input
                     value={fontSize}
                     onChange={(e) => setFontSize(e.target.value)}
-                    className="pl-10 h-10 rounded-xl bg-secondary/20 border-none font-bold"
+                    className="pl-10 h-11 rounded-2xl bg-secondary/20 border-none font-bold"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-secondary/10 border border-border">
-              <div className="flex items-center gap-3 text-sm font-bold">
-                <Palette className="w-4 h-4 text-primary" /> Warna Elemen
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/10">
+              <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-primary">
+                <Palette className="w-4 h-4" /> Warna
               </div>
               <input
                 type="color"
                 value={textColor}
                 onChange={(e) => setTextColor(e.target.value)}
-                className="w-10 h-10 rounded-full border-2 border-white shadow-md cursor-pointer transition-transform hover:scale-110"
+                className="w-12 h-10 rounded-xl border-2 border-white shadow-sm cursor-pointer"
               />
             </div>
           </div>
 
-          <DialogFooter className="p-6 bg-secondary/20 flex gap-3 sm:justify-between items-center">
+          <DialogFooter className="p-6 pt-0">
             <Button
-              variant="ghost"
-              className="text-red-500 font-bold rounded-xl"
+              onClick={handleApplyChanges}
+              className="w-full bg-primary text-white h-14 rounded-2xl font-black shadow-lg shadow-primary/20 uppercase tracking-widest text-xs"
             >
-              <Trash2 className="w-4 h-4 mr-2" /> Hapus
-            </Button>
-            <Button
-              onClick={handleSave}
-              className="bg-primary text-white px-10 rounded-xl font-bold shadow-lg shadow-primary/20"
-            >
-              Simpan
+              Terapkan
             </Button>
           </DialogFooter>
         </DialogContent>

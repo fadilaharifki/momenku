@@ -1,0 +1,1 @@
+ALTER TABLE layouts ADD COLUMN background_url TEXT;
