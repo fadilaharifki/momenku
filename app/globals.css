@@ -209,5 +209,60 @@
 
 /* Smooth scroll */
 html {
+  scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
+}
+
+/* Kita pakai !important supaya tidak kalah sama inline style dari database */
+.inv-animate {
+  opacity: 0 !important;
+  visibility: hidden;
+  transition: opacity 0.4s ease-out;
+}
+
+/* Munculkan hanya saat class sakti ini ada */
+.inv-animate.animate__animated {
+  opacity: 1 !important;
+  visibility: visible;
+}
+
+/* Memastikan elemen h-full benar-benar mengikuti section */
+section > div {
+  height: 100%;
+  width: 100%;
+}
+
+[data-aos] {
+  visibility: hidden;
+}
+
+[data-aos].aos-animate {
+  visibility: visible;
+}
+
+/* Targetkan root div di dalam preview */
+.preview-viewport .html-content-root,
+.preview-viewport .html-content-root > div {
+  height: 667px !important;
+  min-height: 667px !important;
+  max-height: 667px !important;
+  overflow: hidden; /* Agar konten tidak 'bocor' keluar frame HP */
+  position: relative;
+}
+
+/* PAKSA semua class h-screen atau height: 100% di dalam preview untuk nurut ke 667px */
+.preview-viewport [class*="h-screen"],
+.preview-viewport [style*="height: 100%"],
+.preview-viewport [style*="height:100%"],
+.preview-viewport [class*="h-full"] {
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 667px !important;
+}
+
+/* Khusus untuk flex-col items-center justify-between agar tidak melar */
+.preview-viewport .flex-col {
+  justify-content: space-around !important; /* Agar konten lebih proporsional di layar pendek */
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
 }
