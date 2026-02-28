@@ -11,7 +11,7 @@ import {
   Trash2,
   Image as ImageIcon,
   Upload,
-  Link as LinkIcon, // Tambahkan icon link
+  Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -60,6 +60,8 @@ const LIB_ASSETS = [
   "muslim_bride_faceless.webp",
   "muslim_groom_faceless.webp",
   "gunung-wayang.webp",
+  "BCA.webp",
+  "BNI.webp",
 ];
 
 interface Props {
@@ -84,7 +86,6 @@ export default function VisualLiveEditor({
   const [imageTab, setImageTab] = useState<"upload" | "assets">("upload");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // States Text & Link Editor
   const [editValue, setEditValue] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [editLink, setEditLink] = useState(false);
@@ -94,7 +95,6 @@ export default function VisualLiveEditor({
   const [isBold, setIsBold] = useState(false);
   const [isItalic, setIsItalic] = useState(false);
 
-  // States Image Editor
   const [imageUrl, setImageUrl] = useState("");
 
   const { mutate: uploadImage, isPending: isUploading } = useUploadImage({
@@ -111,6 +111,7 @@ export default function VisualLiveEditor({
 
   const { mutate: deleteImage } = useDeleteImage();
 
+  // 1. PREPARE HTML (Logic Baru: Kecualikan isi dalam countdown)
   const prepareHtml = (rawHtml: string) => {
     if (!rawHtml) return "";
     const parser = new DOMParser();
@@ -122,14 +123,23 @@ export default function VisualLiveEditor({
     });
 
     const textElements = doc.querySelectorAll(
-      "h1, h2, h3, h4, h5, h6, p, span, b, i, a, button, div.editable-node",
+      "h1, h2, h3, h4, h5, h6, p, span, b, i, a, button, div.editable-node, #countdown-target",
     );
-    textElements.forEach((el, index) => {
-      if (el.textContent?.trim() || el.tagName === "A") {
-        el.classList.add("editable-text-only");
-        // Beri tanda khusus jika elemen adalah Link
-        if (el.tagName === "A") el.classList.add("editable-link");
 
+    textElements.forEach((el, index) => {
+      // JANGAN beri class editable pada child di dalam countdown-target
+      if (el.closest("#countdown-target") && el.id !== "countdown-target") {
+        return;
+      }
+
+      if (
+        el.textContent?.trim() ||
+        el.tagName === "A" ||
+        el.id === "countdown-target"
+      ) {
+        el.classList.add("editable-text-only");
+        if (el.tagName === "A") el.classList.add("editable-link");
+        // Gunakan ID yang sudah ada jika ada (seperti countdown-target), jika tidak buat baru
         if (!el.id) el.id = `txt-${section.id.slice(0, 4)}-${index}`;
       }
     });
@@ -147,10 +157,10 @@ export default function VisualLiveEditor({
     if (section?.body) setHtmlBody(prepareHtml(section.body));
   }, [section]);
 
+  // 2. HANDLE ELEMENT CLICK (Logic Baru: Ambil data-target)
   const handleElementClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
 
-    // Detect Image
     const imgTarget = target.closest(".editable-image") as HTMLImageElement;
     if (imgTarget) {
       e.preventDefault();
@@ -162,22 +172,28 @@ export default function VisualLiveEditor({
       return;
     }
 
-    // Detect Text or Link
     const textTarget = target.closest(".editable-text-only") as HTMLElement;
     if (textTarget) {
       e.preventDefault();
       e.stopPropagation();
       setEditMode("text");
       setSelectedId(textTarget.id);
-      setEditValue(textTarget.innerText.trim());
 
-      // Ambil URL jika target adalah Link <a>
-      if (textTarget.tagName === "A") {
-        setEditUrl((textTarget as HTMLAnchorElement).href);
-        setEditLink(true);
-      } else {
+      // Jika yang diklik adalah countdown, ambil atributnya, bukan teks dalamnya
+      if (textTarget.id === "countdown-target") {
+        setEditValue(
+          textTarget.getAttribute("data-target") || "2025-11-30 08:00:00",
+        );
         setEditLink(false);
-        setEditUrl("");
+      } else {
+        setEditValue(textTarget.innerText.trim());
+        if (textTarget.tagName === "A") {
+          setEditUrl((textTarget as HTMLAnchorElement).href);
+          setEditLink(true);
+        } else {
+          setEditLink(false);
+          setEditUrl("");
+        }
       }
 
       const style = window.getComputedStyle(textTarget);
@@ -200,6 +216,7 @@ export default function VisualLiveEditor({
     }
   };
 
+  // 3. APPLY CHANGES (Logic Baru: Update atribut data-target)
   const handleApplyChanges = () => {
     if (!selectedId) return;
     const parser = new DOMParser();
@@ -208,16 +225,19 @@ export default function VisualLiveEditor({
 
     if (element) {
       if (editMode === "text") {
-        element.innerHTML = editValue.replace(/\n/g, "<br />");
-        element.style.fontSize = fontSize;
-        element.style.color = textColor;
-        element.style.fontWeight = isBold ? "bold" : "normal";
-        element.style.fontStyle = isItalic ? "italic" : "normal";
-        if (fontFamily !== "Default") element.style.fontFamily = fontFamily;
-
-        // Simpan URL jika elemen adalah Link
-        if (element.tagName === "A" && editUrl) {
-          (element as HTMLAnchorElement).href = editUrl;
+        if (element.id === "countdown-target") {
+          // UPDATE ATRIBUT, BUKAN INNERHTML
+          element.setAttribute("data-target", editValue.trim());
+        } else {
+          element.innerHTML = editValue.replace(/\n/g, "<br />");
+          element.style.fontSize = fontSize;
+          element.style.color = textColor;
+          element.style.fontWeight = isBold ? "bold" : "normal";
+          element.style.fontStyle = isItalic ? "italic" : "normal";
+          if (fontFamily !== "Default") element.style.fontFamily = fontFamily;
+          if (element.tagName === "A" && editUrl) {
+            (element as HTMLAnchorElement).href = editUrl;
+          }
         }
       } else {
         (element as HTMLImageElement).src = imageUrl;
@@ -244,7 +264,6 @@ export default function VisualLiveEditor({
 
   return (
     <div className="p-4 md:p-6 space-y-6 font-poppins">
-      {/* HEADER */}
       <div className="flex items-center justify-between bg-white p-4 rounded-3xl border border-primary/10 shadow-sm sticky top-0 z-20">
         <div className="flex items-center gap-4">
           <AlertDialog>
@@ -288,7 +307,6 @@ export default function VisualLiveEditor({
         </Button>
       </div>
 
-      {/* DEVICE PREVIEW */}
       <div className="flex justify-center py-10 bg-slate-100/50 rounded-[3rem] border-2 border-dashed border-slate-200">
         <div className="relative w-[375px] h-[667px] shadow-[0_0_0_12px_#1e293b] rounded-[3rem] bg-[#4a0404] overflow-hidden">
           <div
@@ -306,6 +324,27 @@ export default function VisualLiveEditor({
       <style
         dangerouslySetInnerHTML={{
           __html: `
+        #countdown-target.editable-text-only { 
+          outline: 2px dashed #d4af37 !important; 
+          outline-offset: 4px;
+          cursor: pointer;
+          position: relative;
+        }
+        #countdown-target.editable-text-only::after {
+          content: "KLIK UNTUK SET TANGGAL";
+          position: absolute;
+          top: -25px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #d4af37;
+          color: #4a0404;
+          font-size: 9px;
+          padding: 3px 10px;
+          border-radius: 6px;
+          font-weight: 800;
+          white-space: nowrap;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
         .preview-viewport section { height: 667px !important; min-height: 667px !important; }
         .editable-text-only:hover { outline: 2px solid #d4af37; outline-offset: 2px; cursor: pointer; }
         .editable-link:hover { outline: 2px dashed #d4af37 !important; background-color: rgba(212, 175, 55, 0.1) !important; cursor: pointer; }
@@ -314,7 +353,6 @@ export default function VisualLiveEditor({
         }}
       />
 
-      {/* MODAL EDITOR */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-md rounded-[2.5rem] p-0 overflow-hidden font-poppins">
           <DialogHeader className="p-8 bg-slate-50/80 border-b">
@@ -326,116 +364,131 @@ export default function VisualLiveEditor({
                   <ImageIcon size={16} className="text-[#d4af37]" />
                 )}
               </div>
-              {editMode === "text"
-                ? editUrl
-                  ? "Link & Text Editor"
-                  : "Text Editor"
-                : "Image Editor"}
+              {selectedId === "countdown-target"
+                ? "Set Target Waktu"
+                : editMode === "text"
+                  ? editUrl
+                    ? "Link & Text Editor"
+                    : "Text Editor"
+                  : "Image Editor"}
             </DialogTitle>
           </DialogHeader>
 
           <div className="px-8 py-6 space-y-6">
             {editMode === "text" ? (
               <div className="space-y-6">
-                {/* Teks Content */}
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">
-                    Konten Teks
+                    {selectedId === "countdown-target"
+                      ? "Format: YYYY-MM-DD HH:mm:ss"
+                      : "Konten Teks"}
                   </Label>
                   <Textarea
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
+                    placeholder={
+                      selectedId === "countdown-target"
+                        ? "Contoh: 2025-12-31 08:00:00"
+                        : ""
+                    }
                     className="rounded-2xl bg-slate-50 border-none min-h-25 p-4 focus-visible:ring-[#d4af37]"
                   />
                 </div>
 
-                {/* Input URL (Hanya muncul jika elemen adalah <a>) */}
                 {editLink && (
-                  <div className="space-y-2 p-4 bg-[#d4af37]/5 rounded-2xl border border-[#d4af37]/20 animate-in fade-in slide-in-from-top-2">
+                  <div className="space-y-2 p-4 bg-[#d4af37]/5 rounded-2xl border border-[#d4af37]/20">
                     <Label className="text-[10px] font-bold uppercase text-[#d4af37] flex items-center gap-2">
                       <LinkIcon size={14} /> Tautan URL
                     </Label>
                     <Input
                       value={editUrl}
                       onChange={(e) => setEditUrl(e.target.value)}
-                      className="rounded-xl bg-white border-none h-11 text-[12px] font-mono text-blue-600"
+                      className="rounded-xl bg-white border-none h-11 text-[12px]"
                       placeholder="https://..."
                     />
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">
-                      Ukuran (px)
-                    </Label>
-                    <Input
-                      type="text"
-                      value={fontSize}
-                      onChange={(e) => setFontSize(e.target.value)}
-                      className="rounded-xl bg-slate-50 border-none h-11"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">
-                      Warna
-                    </Label>
-                    <div className="flex gap-2 items-center bg-slate-50 p-1 rounded-xl h-11">
-                      <input
-                        type="color"
-                        value={textColor}
-                        onChange={(e) => setTextColor(e.target.value)}
-                        className="w-8 h-8 rounded-lg border-none bg-transparent cursor-pointer"
-                      />
-                      <span className="text-[10px] font-mono text-slate-50 uppercase">
-                        {textColor}
-                      </span>
+                {/* Sembunyikan styling jika edit countdown */}
+                {selectedId !== "countdown-target" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">
+                          Ukuran (px)
+                        </Label>
+                        <Input
+                          type="text"
+                          value={fontSize}
+                          onChange={(e) => setFontSize(e.target.value)}
+                          className="rounded-xl bg-slate-50 border-none h-11"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">
+                          Warna
+                        </Label>
+                        <div className="flex gap-2 items-center bg-slate-50 p-1 rounded-xl h-11">
+                          <input
+                            type="color"
+                            value={textColor}
+                            onChange={(e) => setTextColor(e.target.value)}
+                            className="w-8 h-8 rounded-lg border-none bg-transparent cursor-pointer"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">
-                      Jenis Font
-                    </Label>
-                    <Select value={fontFamily} onValueChange={setFontFamily}>
-                      <SelectTrigger className="rounded-xl bg-slate-50 border-none h-11">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl">
-                        <SelectItem value="Default">Default System</SelectItem>
-                        <SelectItem value="Poppins">Poppins</SelectItem>
-                        <SelectItem value="Great Vibes">Great Vibes</SelectItem>
-                        <SelectItem value="Playfair Display">
-                          Playfair Display
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant={isBold ? "default" : "outline"}
-                      onClick={() => setIsBold(!isBold)}
-                      className={cn(
-                        "flex-1 rounded-xl h-11",
-                        isBold && "bg-[#d4af37]",
-                      )}
-                    >
-                      Bold
-                    </Button>
-                    <Button
-                      variant={isItalic ? "default" : "outline"}
-                      onClick={() => setIsItalic(!isItalic)}
-                      className={cn(
-                        "flex-1 rounded-xl h-11",
-                        isItalic && "bg-[#d4af37]",
-                      )}
-                    >
-                      Italic
-                    </Button>
-                  </div>
-                </div>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-[10px] font-bold uppercase text-slate-400 ml-1">
+                          Jenis Font
+                        </Label>
+                        <Select
+                          value={fontFamily}
+                          onValueChange={setFontFamily}
+                        >
+                          <SelectTrigger className="rounded-xl bg-slate-50 border-none h-11">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            <SelectItem value="Default">
+                              Default System
+                            </SelectItem>
+                            <SelectItem value="Poppins">Poppins</SelectItem>
+                            <SelectItem value="Great Vibes">
+                              Great Vibes
+                            </SelectItem>
+                            <SelectItem value="Playfair Display">
+                              Playfair Display
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant={isBold ? "default" : "outline"}
+                          onClick={() => setIsBold(!isBold)}
+                          className={cn(
+                            "flex-1 rounded-xl h-11",
+                            isBold && "bg-[#d4af37]",
+                          )}
+                        >
+                          Bold
+                        </Button>
+                        <Button
+                          variant={isItalic ? "default" : "outline"}
+                          onClick={() => setIsItalic(!isItalic)}
+                          className={cn(
+                            "flex-1 rounded-xl h-11",
+                            isItalic && "bg-[#d4af37]",
+                          )}
+                        >
+                          Italic
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div className="space-y-6">
@@ -443,9 +496,9 @@ export default function VisualLiveEditor({
                   <button
                     onClick={() => setImageTab("upload")}
                     className={cn(
-                      "flex-1 py-2 text-[10px] font-bold uppercase rounded-xl transition-all",
+                      "flex-1 py-2 text-[10px] font-bold uppercase rounded-xl",
                       imageTab === "upload"
-                        ? "bg-white shadow-sm text-[#d4af37]"
+                        ? "bg-white text-[#d4af37]"
                         : "text-slate-400",
                     )}
                   >
@@ -454,79 +507,68 @@ export default function VisualLiveEditor({
                   <button
                     onClick={() => setImageTab("assets")}
                     className={cn(
-                      "flex-1 py-2 text-[10px] font-bold uppercase rounded-xl transition-all",
+                      "flex-1 py-2 text-[10px] font-bold uppercase rounded-xl",
                       imageTab === "assets"
-                        ? "bg-white shadow-sm text-[#d4af37]"
+                        ? "bg-white text-[#d4af37]"
                         : "text-slate-400",
                     )}
                   >
                     Assets
                   </button>
                 </div>
-
                 {imageTab === "upload" ? (
-                  <div className="space-y-4">
-                    <div className="relative aspect-video rounded-4xl overflow-hidden bg-slate-50 border-2 border-dashed border-slate-200 group">
-                      {imageUrl ? (
-                        <>
-                          <img
-                            src={imageUrl}
-                            className="w-full h-full object-contain"
-                            alt="preview"
-                          />
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-3 md:opacity-0 md:group-hover:opacity-100 opacity-100">
-                            <Button
-                              onClick={() => fileInputRef.current?.click()}
-                              variant="secondary"
-                              className="rounded-full w-12 h-12 p-0 bg-white/20 backdrop-blur-md border-white/30 text-white"
-                            >
-                              <Upload size={20} />
-                            </Button>
-                            <Button
-                              onClick={handleRemoveImage}
-                              variant="destructive"
-                              className="rounded-full w-12 h-12 p-0"
-                            >
-                              <Trash2 size={20} />
-                            </Button>
-                          </div>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className="w-full h-full flex flex-col items-center justify-center gap-3 text-slate-400 hover:text-[#d4af37]"
-                        >
-                          <div className="p-4 bg-white rounded-2xl shadow-sm">
-                            <Upload size={32} />
-                          </div>
-                          <span className="text-[11px] font-bold uppercase tracking-wider">
-                            Klik untuk Upload
-                          </span>
-                        </button>
-                      )}
-                      {isUploading && (
-                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
-                          <Loader2
-                            className="animate-spin text-[#d4af37]"
-                            size={32}
-                          />
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                            Processing WebP...
-                          </span>
+                  <div className="relative aspect-video rounded-4xl overflow-hidden bg-slate-50 border-2 border-dashed border-slate-200 group">
+                    {imageUrl ? (
+                      <>
+                        <img
+                          src={imageUrl}
+                          className="w-full h-full object-contain"
+                          alt="preview"
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            onClick={() => fileInputRef.current?.click()}
+                            variant="secondary"
+                            className="rounded-full w-12 h-12 p-0"
+                          >
+                            <Upload size={20} />
+                          </Button>
+                          <Button
+                            onClick={handleRemoveImage}
+                            variant="destructive"
+                            className="rounded-full w-12 h-12 p-0"
+                          >
+                            <Trash2 size={20} />
+                          </Button>
                         </div>
-                      )}
-                    </div>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-full h-full flex flex-col items-center justify-center gap-3 text-slate-400 hover:text-[#d4af37]"
+                      >
+                        <Upload size={32} />
+                        <span className="text-[11px] font-bold uppercase">
+                          Upload
+                        </span>
+                      </button>
+                    )}
+                    {isUploading && (
+                      <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                        <Loader2 className="animate-spin" />
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-3 max-h-64 overflow-y-auto pr-2 scrollbar-hide">
+                  <div className="grid grid-cols-3 gap-3 max-h-64 overflow-y-auto scrollbar-hide">
                     {LIB_ASSETS.map((asset) => (
                       <button
                         key={asset}
                         onClick={() => setImageUrl(`/assets/${asset}`)}
                         className={cn(
-                          "relative aspect-square rounded-2xl overflow-hidden border-2 transition-all p-1 bg-slate-50",
+                          "aspect-square rounded-2xl overflow-hidden border-2 p-1 bg-slate-50",
                           imageUrl === `/assets/${asset}`
-                            ? "border-[#d4af37] bg-white ring-2 ring-[#d4af37]/20"
+                            ? "border-[#d4af37]"
                             : "border-transparent",
                         )}
                       >

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useState, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
 import {
   Settings,
   Palette,
@@ -37,6 +37,8 @@ import { useGetInvitationById } from "@/hooks/api/useGetInvitationById";
 import ManageInvitationSkeleton from "@/components/skeleton/manage-invitation-skeleton";
 import { useToggleSectionActive } from "@/hooks/api/useToggleSectionActive";
 import { useChangeInvitationStatus } from "@/hooks/api/useChangeInvitationStatus";
+import RSVPSettingEditor from "@/components/setting/RSVP-setting-editor";
+import { toast } from "sonner";
 
 export default function ManageInvitationPage() {
   const router = useRouter();
@@ -45,14 +47,20 @@ export default function ManageInvitationPage() {
   const changeStatus = useChangeInvitationStatus(id as string);
   const toggleActive = useToggleSectionActive(id as string);
   const { data: response, isLoading } = useGetInvitationById(id as string);
+
   const invitation = response?.data;
   const sections = useMemo(() => invitation?.sections || [], [invitation]);
 
   const [selectSectionId, setSelectSectionId] = useState("");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isRSVPEditorOpen, setIsRSVPEditorOpen] = useState(false);
   const [selectedSection, setSelectedSection] =
     useState<InvitationSection | null>(null);
   const [isLayoutModalOpen, setIsLayoutModalOpen] = useState(false);
+
+  const futureUnderDev = () => {
+    toast.info("Fitur dalam pengembangan");
+  };
 
   const mainTools = useMemo(
     () => [
@@ -61,36 +69,42 @@ export default function ManageInvitationPage() {
         icon: Settings,
         color: "text-blue-500",
         bg: "bg-blue-50",
+        onClick: () => futureUnderDev(),
       },
       {
         name: "Tema",
         icon: Palette,
         color: "text-indigo-500",
         bg: "bg-indigo-50",
+        onClick: () => futureUnderDev(),
       },
       {
         name: "Music",
         icon: Music,
         color: "text-amber-500",
         bg: "bg-amber-50",
+        onClick: () => futureUnderDev(),
       },
       {
         name: "Background",
         icon: ImageIcon,
         color: "text-rose-500",
         bg: "bg-rose-50",
+        onClick: () => futureUnderDev(),
       },
       {
         name: "RSVP",
         icon: MailCheck,
         color: "text-emerald-500",
         bg: "bg-emerald-50",
+        onClick: () => setIsRSVPEditorOpen(true),
       },
       {
         name: "Layar Sapa",
         icon: Tv,
         color: "text-violet-500",
         bg: "bg-violet-50",
+        onClick: () => futureUnderDev(),
       },
       {
         name: "Preview",
@@ -106,6 +120,7 @@ export default function ManageInvitationPage() {
         icon: Send,
         color: "text-orange-500",
         bg: "bg-orange-50",
+        onClick: () => futureUnderDev(),
       },
     ],
     [response],
@@ -343,6 +358,15 @@ export default function ManageInvitationPage() {
         isOpen={isLayoutModalOpen}
         onClose={() => setIsLayoutModalOpen(false)}
         onSelect={(layout) => console.log("Layout Selected:", layout)}
+      />
+
+      <RSVPSettingEditor
+        isOpen={isRSVPEditorOpen}
+        onClose={() => setIsRSVPEditorOpen(false)}
+        initialData={invitation?.settings}
+        onSave={(newData: any) => {
+          setIsRSVPEditorOpen(false);
+        }}
       />
     </div>
   );
