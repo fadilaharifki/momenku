@@ -25,6 +25,8 @@ export async function POST(request: NextRequest) {
 
     if (themeError || !theme) return errorResponse("Tema tidak ditemukan", 404);
 
+    const storagePath = `client/${domain}`;
+
     const { data, error } = await supabase
       .rpc("create_invitation_with_sections", {
         p_user_id: user.id,
@@ -38,6 +40,7 @@ export async function POST(request: NextRequest) {
             inputs: [],
           },
         },
+        p_storage_path: storagePath,
       })
       .single();
 

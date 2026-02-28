@@ -332,7 +332,9 @@ export default function ManageInvitationPage() {
           </SheetHeader>
 
           <div className="h-[calc(100vh-80px)] overflow-y-auto bg-slate-50/50">
-            {selectedSection && <VisualLiveEditor section={selectedSection} />}
+            {selectedSection && (
+              <VisualLiveEditor id={id as string} section={selectedSection} />
+            )}
           </div>
         </SheetContent>
       </Sheet>
