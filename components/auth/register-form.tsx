@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormInput } from "@/components/form-input";
 import { LoginWithGoogle } from "../login-with-google";
-import { useRegisterUser } from "@/hooks/api/useRegisterUser";
+import { useRegisterUser } from "@/hooks/api/usePostRegisterUser";
 import { useRouter } from "next/navigation";
 
 const registerSchema = z

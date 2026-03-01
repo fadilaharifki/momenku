@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useGetCategories } from "@/hooks/api/useGetCategories";
-import { useCreateInvitation } from "@/hooks/api/useCreateInvitation";
+import { useCreateInvitation } from "@/hooks/api/usePostCreateInvitation";
 import { toast } from "sonner";
 
 export default function SetupInvitationStep() {

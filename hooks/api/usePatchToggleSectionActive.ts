@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
-import { InvitationSection } from "@/type/invitation";
+import { InvitationSectionInterface } from "@/type/invitation";
 
 interface TogglePayload {
   id: string;

@@ -1,8 +1,61 @@
-import { errorResponse, successResponse } from "@/lib/api-response";
+import {
+  errorResponse,
+  paginateResponse,
+  successResponse,
+} from "@/lib/api-response";
 import { createClientCookies } from "@/lib/supabase-server";
 import { NextRequest } from "next/server";
 
-// Fungsi untuk generate kode random
+export async function GET(req: NextRequest) {
+  const supabase = await createClientCookies();
+  const { searchParams } = new URL(req.url);
+
+  const invitation_id = searchParams.get("invitation_id");
+  const keyword = searchParams.get("keyword");
+  const attendance = searchParams.get("attendance");
+
+  const page = parseInt(searchParams.get("page") || "1");
+  const limitParam = searchParams.get("limit") || "10";
+  const limit = limitParam === "all" ? 1000 : parseInt(limitParam);
+
+  try {
+    let query = supabase
+      .from("invitation_rsvps")
+      .select("*", { count: "exact" });
+
+    if (invitation_id) {
+      query = query.eq("invitation_id", invitation_id);
+    }
+
+    if (keyword) {
+      query = query.or(`name.ilike.%${keyword}%,rsvp_code.ilike.%${keyword}%`);
+    }
+
+    if (attendance !== null && attendance !== "") {
+      query = query.eq("attendance", attendance === "true");
+    }
+
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) throw error;
+
+    return paginateResponse(
+      data,
+      page,
+      limit,
+      count || 0,
+      "Daftar tamu berhasil diambil",
+    );
+  } catch (error: any) {
+    return errorResponse(error.message || "Gagal mengambil data tamu");
+  }
+}
+
 function generateRandomCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Tanpa karakter membingungkan
   let result = "";
@@ -12,21 +65,18 @@ function generateRandomCode() {
   return `MOM-${result}`; // Contoh: MOM-K7R2W
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest) {
   const supabase = await createClientCookies();
   try {
-    const { id } = await params;
     const body = await req.json();
 
     const {
+      invitation_id,
       name,
       group_name,
       phone,
       attendance,
-      guest,
+      guest_count,
       comment,
       ...restOfData
     } = body;
@@ -59,18 +109,17 @@ export async function POST(
     if (!rsvp_code)
       throw new Error("Gagal membuat kode unik, silakan coba lagi.");
 
-    // 2. Insert ke Supabase dengan rsvp_code yang sudah digenerate
     const { data, error } = await supabase
       .from("invitation_rsvps")
       .insert([
         {
-          invitation_id: id,
-          rsvp_code: rsvp_code, // Kode hasil generate BE
+          invitation_id,
+          rsvp_code: rsvp_code,
           name: name,
           group_name: group_name || null,
           phone: phone || null,
           attendance: attendance,
-          guest_count: parseInt(guest || "0"),
+          guest_count: parseInt(guest_count || "0"),
           comment: comment || null,
           additional_data: restOfData,
           is_attended: false,

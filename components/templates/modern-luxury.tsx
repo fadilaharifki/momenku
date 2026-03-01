@@ -96,7 +96,7 @@ export function ModernLuxuryTemplate() {
       {/* Back */}
       <div className="fixed top-4 left-4 z-50">
         <Link
-          href="/#template"
+          href="/home/#template"
           className="inline-flex items-center gap-2 bg-[#111]/80 backdrop-blur-sm px-4 py-2 text-xs text-[#d4af37] border border-[#d4af37]/20 hover:bg-[#111] transition-colors"
         >
           <ArrowLeft className="h-3 w-3" />

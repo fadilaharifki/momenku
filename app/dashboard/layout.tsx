@@ -125,7 +125,7 @@ export default function DashboardLayout({
             <Separator orientation="vertical" className="h-8 hidden sm:block" />
 
             <Button
-              onClick={() => router.push("/#template")}
+              onClick={() => router.push("/home/#template")}
               className="hidden sm:flex items-center gap-2 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/10 hover:bg-primary/90 active:scale-95 transition-all"
             >
               <Plus size={18} />

@@ -49,7 +49,7 @@ export function Hero() {
             Mulai Buat Undangan
           </Link>
           <Link
-            href="#template"
+            href="/home/#template"
             className="border-2 border-primary/20 text-primary hover:bg-primary/5 px-10 py-4 rounded-full font-bold transition-all"
           >
             Lihat Katalog

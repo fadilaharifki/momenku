@@ -19,10 +19,10 @@ export function usePostRSVP(
 ) {
   return useMutation({
     mutationFn: async (payload) => {
-      const { data } = await axios.post<ApiResponse<any>>(
-        `/api/invitations/${invitationId}/rsvp`,
-        payload,
-      );
+      const { data } = await axios.post<ApiResponse<any>>(`/api/rsvp`, {
+        ...payload,
+        invitation_id: invitationId,
+      });
       return data;
     },
     ...options,

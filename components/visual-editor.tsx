@@ -31,8 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { InvitationSection } from "@/type/invitation";
-import { useUpdateSection } from "@/hooks/api/useUpdateSection";
+import { InvitationSectionInterface } from "@/type/invitation";
+import { useUpdateSection } from "@/hooks/api/usePatchUpdateSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,7 +43,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useUploadImage } from "@/hooks/api/useUploadImage";
+import { useUploadImage } from "@/hooks/api/usePostUploadImage";
 import { useDeleteImage } from "@/hooks/api/useDeleteImage";
 import { cn } from "@/lib/utils";
 
@@ -66,7 +66,7 @@ const LIB_ASSETS = [
 
 interface Props {
   id: string;
-  section: InvitationSection;
+  section: InvitationSectionInterface;
   onClose?: () => void;
   onDelete?: (id: string) => void;
 }

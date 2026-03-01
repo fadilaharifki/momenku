@@ -18,7 +18,7 @@ import {
   Calendar,
 } from "lucide-react";
 
-import { InvitationSection } from "@/type/invitation";
+import { InvitationSectionInterface } from "@/type/invitation";
 
 // Shadcn UI Components
 import { Button } from "@/components/ui/button";
@@ -35,10 +35,11 @@ import VisualLiveEditor from "@/components/visual-editor";
 import { LayoutPicker } from "@/components/layout-picker";
 import { useGetInvitationById } from "@/hooks/api/useGetInvitationById";
 import ManageInvitationSkeleton from "@/components/skeleton/manage-invitation-skeleton";
-import { useToggleSectionActive } from "@/hooks/api/useToggleSectionActive";
-import { useChangeInvitationStatus } from "@/hooks/api/useChangeInvitationStatus";
+import { useToggleSectionActive } from "@/hooks/api/usePatchToggleSectionActive";
+import { useChangeInvitationStatus } from "@/hooks/api/usePatchChangeInvitationStatus";
 import RSVPSettingEditor from "@/components/setting/RSVP-setting-editor";
 import { toast } from "sonner";
+import { RSVPDataSetting } from "@/type/rsvp";
 
 export default function ManageInvitationPage() {
   const router = useRouter();
@@ -55,7 +56,7 @@ export default function ManageInvitationPage() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isRSVPEditorOpen, setIsRSVPEditorOpen] = useState(false);
   const [selectedSection, setSelectedSection] =
-    useState<InvitationSection | null>(null);
+    useState<InvitationSectionInterface | null>(null);
   const [isLayoutModalOpen, setIsLayoutModalOpen] = useState(false);
 
   const futureUnderDev = () => {
@@ -126,7 +127,7 @@ export default function ManageInvitationPage() {
     [response],
   );
 
-  const handleOpenEditor = (section: InvitationSection) => {
+  const handleOpenEditor = (section: InvitationSectionInterface) => {
     setSelectedSection(section);
     setIsEditorOpen(true);
   };
@@ -363,10 +364,8 @@ export default function ManageInvitationPage() {
       <RSVPSettingEditor
         isOpen={isRSVPEditorOpen}
         onClose={() => setIsRSVPEditorOpen(false)}
-        initialData={invitation?.settings}
-        onSave={(newData: any) => {
-          setIsRSVPEditorOpen(false);
-        }}
+        initialData={invitation?.settings as RSVPDataSetting}
+        id={invitation?.id as string}
       />
     </div>
   );

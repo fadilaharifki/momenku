@@ -23,11 +23,13 @@ export function Footer() {
 
           {/* Links - Layanan */}
           <div>
-            <h4 className="mb-4  text-sm font-semibold text-foreground">Layanan</h4>
+            <h4 className="mb-4  text-sm font-semibold text-foreground">
+              Layanan
+            </h4>
             <ul className="space-y-3">
               <li>
                 <Link
-                  href="#template"
+                  href="/home/#template"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
                   Undangan Pernikahan
@@ -35,7 +37,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="#template"
+                  href="/home/#template"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
                   Undangan Khitanan
@@ -43,7 +45,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="#template"
+                  href="/home/#template"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
                   Undangan Aqiqah
@@ -51,7 +53,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="#template"
+                  href="/home/#template"
                   className="text-sm text-muted-foreground transition-colors hover:text-primary"
                 >
                   Undangan Ulang Tahun
@@ -103,7 +105,9 @@ export function Footer() {
 
           {/* Links - Bantuan */}
           <div>
-            <h4 className="mb-4  text-sm font-semibold text-foreground">Bantuan</h4>
+            <h4 className="mb-4  text-sm font-semibold text-foreground">
+              Bantuan
+            </h4>
             <ul className="space-y-3">
               <li>
                 <Link

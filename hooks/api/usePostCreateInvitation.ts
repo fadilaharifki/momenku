@@ -1,7 +1,7 @@
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
 import axios from "axios";
 import { ApiResponse } from "@/type/global";
-import { Invitation } from "@/type/invitation";
+import { InvitationInterface } from "@/type/invitation";
 
 interface CreateInvitationPayload {
   theme_slug: string;
@@ -10,14 +10,14 @@ interface CreateInvitationPayload {
 
 export function useCreateInvitation(
   options?: UseMutationOptions<
-    ApiResponse<Invitation>,
+    ApiResponse<InvitationInterface>,
     Error,
     CreateInvitationPayload
   >,
 ) {
   return useMutation({
     mutationFn: async (payload) => {
-      const { data } = await axios.post<ApiResponse<Invitation>>(
+      const { data } = await axios.post<ApiResponse<InvitationInterface>>(
         "/api/invitations",
         payload,
       );

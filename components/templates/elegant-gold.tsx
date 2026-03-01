@@ -90,7 +90,7 @@ export function ElegantGoldTemplate() {
       {/* Back button */}
       <div className="fixed top-4 left-4 z-50">
         <Link
-          href="/#template"
+          href="/home/#template"
           className="inline-flex items-center gap-2 rounded-full bg-[#1a1714]/80 backdrop-blur-sm px-4 py-2 text-xs text-[#c9a84c] border border-[#c9a84c]/20 hover:bg-[#1a1714] transition-colors"
         >
           <ArrowLeft className="h-3 w-3" />

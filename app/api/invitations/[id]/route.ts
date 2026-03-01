@@ -46,3 +46,41 @@ export async function GET(
     return errorResponse(err.message, 500, err);
   }
 }
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const supabase = await createClientCookies();
+  try {
+    const { id } = await params;
+    const body = await req.json();
+
+    if (!id) return errorResponse("ID Undangan tidak ditemukan", 400);
+
+    const updatePayload: any = {
+      ...body,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from("invitations")
+      .update(updatePayload)
+      .eq("id", id)
+      .select(
+        `
+        *,
+        theme:themes (*),
+        sections:invitation_sections (*)
+      `,
+      )
+      .single();
+
+    if (error) throw error;
+
+    return successResponse(data, "Undangan & Settings berhasil diperbarui");
+  } catch (error: any) {
+    console.error("PATCH_INVITATION_ERROR:", error);
+    return errorResponse(error.message || "Gagal memperbarui undangan");
+  }
+}

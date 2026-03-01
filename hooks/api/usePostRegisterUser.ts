@@ -14,8 +14,6 @@ type RegisterOptions = UseMutationOptions<any, any, RegisterPayload, any>;
 export function useRegisterUser(options?: RegisterOptions) {
   return useMutation({
     mutationFn: async (payload: RegisterPayload) => {
-      console.log(payload, "payload");
-
       const { data } = await api.post("auth/register", payload);
       return data;
     },

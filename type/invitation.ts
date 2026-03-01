@@ -1,6 +1,7 @@
+import { RSVPDataSetting } from "./rsvp";
 import { Theme } from "./theme"; // Pastikan kamu punya interface Theme
 
-export interface InvitationSection {
+export interface InvitationSectionInterface {
   id: string;
   invitation_id: string;
   layout_id: string | null;
@@ -17,7 +18,7 @@ export interface InvitationSection {
   updated_at: string;
 }
 
-export interface Invitation {
+export interface InvitationInterface {
   id: string;
   user_id: string;
   theme_id: string | null;
@@ -52,19 +53,12 @@ export interface Invitation {
   is_watermark: number;
 
   // Settings
-  settings: {
-    rsvp_status: number;
-    rsvp_settings: {
-      is_private: boolean;
-      show_comments: boolean;
-      inputs: any[];
-    };
-  };
+  settings: RSVPDataSetting;
 
   // Timestamps
   created_at: Date | string;
   updated_at: Date | string;
 
   theme?: Theme;
-  sections?: InvitationSection[];
+  sections?: InvitationSectionInterface[];
 }

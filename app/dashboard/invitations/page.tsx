@@ -217,7 +217,7 @@ export default function InvitationsPage() {
         {!isLoading && (
           <Card
             className="group border-2 border-dashed border-border bg-transparent rounded-3xl hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer"
-            onClick={() => router.push("/#template")}
+            onClick={() => router.push("/home/#template")}
           >
             <CardContent className="h-full flex flex-col items-center justify-center p-6 gap-3">
               <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center text-muted-foreground group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all shadow-sm">

@@ -7,14 +7,6 @@ export async function POST(req: NextRequest) {
     const supabaseServer = await createClientCookies();
     const { email, password, phone_number, full_name } = await req.json();
 
-    console.log(
-      email,
-      password,
-      phone_number,
-      full_name,
-      "email, password, phone_number, full_name",
-    );
-
     if (!email || !password) {
       return errorResponse("Email and password are required.", 400);
     }

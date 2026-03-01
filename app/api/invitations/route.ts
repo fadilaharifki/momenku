@@ -5,6 +5,7 @@ import {
   paginateResponse,
 } from "@/lib/api-response";
 import { NextRequest } from "next/server";
+import { DEFAULT_INVITATION_SETTINGS } from "@/lib/constants/invitation-defaults";
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,14 +33,7 @@ export async function POST(request: NextRequest) {
         p_user_id: user.id,
         p_theme_id: theme.id,
         p_domain: domain,
-        p_settings: {
-          rsvp_status: 1,
-          rsvp_settings: {
-            is_private: false,
-            show_comments: true,
-            inputs: [],
-          },
-        },
+        p_settings: DEFAULT_INVITATION_SETTINGS,
         p_storage_path: storagePath,
       })
       .single();
