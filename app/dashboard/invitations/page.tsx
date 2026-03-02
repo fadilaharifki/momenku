@@ -33,11 +33,16 @@ import { useGetInvitations } from "@/hooks/api/useGetInvitations";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useAuthStore } from "@/stores/auth-store";
+import { useDeleteInvitation } from "@/hooks/api/useDeleteInvitations";
 
 export default function InvitationsPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch] = useDebounce(searchTerm, 500);
+  const { user } = useAuthStore();
+
+  const { mutate } = useDeleteInvitation();
 
   const { data: response, isLoading } = useGetInvitations({
     keyword: debouncedSearch,
@@ -46,23 +51,29 @@ export default function InvitationsPage() {
 
   const invitations = response?.data || [];
 
+  const handleDelete = (id: string) => {
+    mutate(id);
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 font-poppins">
-      <Alert className="bg-primary/10 border-primary/20 rounded-2xl shadow-sm">
-        <AlertCircle className="h-4 w-4 text-primary" />
-        <AlertDescription className="text-sm font-semibold text-primary flex justify-between items-center w-full">
-          <span>
-            Segera lengkapi informasi profil Kamu untuk fitur maksimal.
-          </span>
-          <Button
-            variant="link"
-            className="text-primary font-bold p-0 h-auto underline"
-            onClick={() => router.push("/dashboard/profile")}
-          >
-            Klik Disini!
-          </Button>
-        </AlertDescription>
-      </Alert>
+      {(!user?.full_name || !user?.phone_number || !user?.email) && (
+        <Alert className="bg-primary/10 border-primary/20 rounded-2xl shadow-sm">
+          <AlertCircle className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-sm font-semibold text-primary flex justify-between items-center w-full">
+            <span>
+              Segera lengkapi informasi profil Kamu untuk fitur maksimal.
+            </span>
+            <Button
+              variant="link"
+              className="text-primary font-bold p-0 h-auto underline"
+              onClick={() => router.push("/dashboard/profile")}
+            >
+              Klik Disini!
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Search Bar */}
       <div className="w-full">
@@ -171,7 +182,10 @@ export default function InvitationsPage() {
                       <Pencil size={14} /> Edit
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="gap-2 cursor-pointer text-sm py-2 text-red-500">
+                    <DropdownMenuItem
+                      onClick={() => handleDelete(item.id)}
+                      className="gap-2 cursor-pointer text-sm py-2 text-red-500"
+                    >
                       <Trash2 size={14} /> Hapus
                     </DropdownMenuItem>
                   </DropdownMenuContent>

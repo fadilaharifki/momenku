@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Menu, X, Sparkles } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
+import { useAuthStore } from "@/stores/auth-store";
 
 export function Navbar() {
+  const { user } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -17,6 +19,43 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const ActionButton = ({ isMobile }: { isMobile: boolean }) => {
+    const className = isMobile
+      ? "flex flex-col gap-4"
+      : "flex items-center gap-6";
+    return (
+      <>
+        {user?.isLoggedIn ? (
+          <div className={className}>
+            <ThemeToggle />
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center rounded-full bg-primary px-7 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all hover:bg-primary/90 hover:scale-105 active:scale-95"
+            >
+              Dashboard
+            </Link>
+          </div>
+        ) : (
+          <div className="hidden md:flex items-center gap-6">
+            <ThemeToggle />
+            <Link
+              href="/login"
+              className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
+            >
+              Masuk
+            </Link>
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center rounded-full bg-primary px-7 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all hover:bg-primary/90 hover:scale-105 active:scale-95"
+            >
+              Daftar Sekarang
+            </Link>
+          </div>
+        )}
+      </>
+    );
+  };
 
   return (
     <nav
@@ -52,21 +91,7 @@ export function Navbar() {
           </div>
 
           {/* Action Buttons */}
-          <div className="hidden md:flex items-center gap-6">
-            <ThemeToggle />
-            <Link
-              href="/login"
-              className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
-            >
-              Masuk
-            </Link>
-            <Link
-              href="/register"
-              className="inline-flex items-center justify-center rounded-full bg-primary px-7 py-2.5 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all hover:bg-primary/90 hover:scale-105 active:scale-95"
-            >
-              Daftar Sekarang
-            </Link>
-          </div>
+          <ActionButton isMobile={false} />
 
           {/* Mobile Toggle */}
           <div className="flex items-center gap-4 md:hidden">
@@ -98,22 +123,7 @@ export function Navbar() {
                 ),
               )}
               <hr className="border-border" />
-              <div className="flex flex-col gap-4">
-                <Link
-                  href="/login"
-                  onClick={() => setIsOpen(false)}
-                  className="text-center py-3 text-sm font-bold text-foreground border border-border rounded-full"
-                >
-                  Masuk
-                </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setIsOpen(false)}
-                  className="text-center py-3 text-sm font-bold bg-primary text-white rounded-full shadow-lg shadow-primary/20"
-                >
-                  Daftar Sekarang
-                </Link>
-              </div>
+              <ActionButton isMobile={true} />
             </div>
           </div>
         )}

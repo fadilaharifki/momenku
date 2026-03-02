@@ -42,7 +42,7 @@ export function FormInput<T extends FieldValues>({
                 {...field}
                 type={type}
                 placeholder={placeholder}
-                className={`border-[#2a2520] bg-[#121212] pl-10 pr-10 text-[#f5f0e8] focus:border-[#c9a84c] ${
+                className={`border-[#2a2520]  text-primary bg-[#121212] pl-10 pr-10 focus:border-[#c9a84c] ${
                   error ? "border-red-500 focus:border-red-500" : ""
                 } ${className}`}
               />

@@ -18,23 +18,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { LoginWithGoogle } from "../login-with-google";
+import { useLoginUser } from "@/hooks/api/useLoginUser";
+import { toast } from "sonner";
 
 export function LoginForm() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const router = useRouter();
+  const { mutate, isPending: isLoading } = useLoginUser({
+    onSuccess: (res) => {
+      toast.success(res.message);
+      router.push("/dashboard");
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
-    setIsLoading(true);
-    // Simulating login logic
-    setTimeout(() => {
-      setIsLoading(false);
-      // router.push("/dashboard");
-    }, 2000);
+    mutate({
+      email,
+      password,
+    });
   };
 
   return (
@@ -89,7 +94,7 @@ export function LoginForm() {
 
           <div className="mb-10">
             <h1 className="mb-2 text-3xl font-bold tracking-tight text-foreground">
-              Selamat Datang <span className="text-primary">Kembali</span>
+              Selamat Datang Kembali
             </h1>
             <p className="text-sm text-muted-foreground font-medium">
               Silakan masuk untuk mengelola momen istimewa Anda.

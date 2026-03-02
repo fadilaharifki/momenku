@@ -40,7 +40,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id" className={`${poppins.variable} ${playfair.variable}`}>
+    <html
+      lang="id"
+      className={`${poppins.variable} ${playfair.variable}`}
+      suppressHydrationWarning
+    >
       <body className="font-sans antialiased">
         <Providers>{children}</Providers>
         <Analytics />

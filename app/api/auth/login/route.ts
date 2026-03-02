@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
     }
 
     return successResponse(
-      { user: data.user, session: data.session },
-      "Login Successfully. Welcome back to MetaPeptides.",
+      null,
+      "Login Successfully. Welcome back to Momenku.",
     );
   } catch (err: any) {
     return errorResponse("An unexpected error occurred during login.", 500);

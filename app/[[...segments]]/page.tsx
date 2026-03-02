@@ -1,25 +1,34 @@
 import InvitationPageComponent from "@/components/showing";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
 
 interface PageProps {
   params: Promise<{ segments?: string[] }>;
 }
 
 async function getInvitationData(slug: string) {
-  const host = (await headers()).get("host");
-  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+  // Pastikan URL-nya tidak undefined/kosong
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-  const res = await fetch(
-    `${protocol}://${host}/api/invitations/ready/${slug}`,
-    {
+  try {
+    const res = await fetch(`${baseUrl}/api/invitations/ready/${slug}`, {
       next: { revalidate: 60 },
-    },
-  );
+    });
 
-  if (!res.ok) return null;
-  return res.json();
+    // Cek Content-Type header sebelum parsing
+    const contentType = res.headers.get("content-type");
+    if (!res.ok || !contentType || !contentType.includes("application/json")) {
+      console.error(
+        `API Error for slug ${slug}: Received non-JSON or error status`,
+      );
+      return null;
+    }
+
+    return await res.json();
+  } catch (error) {
+    console.error("FETCH_INVITATION_ERROR:", error);
+    return null;
+  }
 }
 
 export async function generateMetadata({

@@ -57,8 +57,9 @@ export default function SetupInvitationStep() {
   }, [categoryParam]);
 
   const handleNext = () => {
-    if (!slug) return alert("Link undangan tidak boleh kosong");
-    if (!themeParam) return alert("Pilih tema terlebih dahulu di katalog");
+    if (!slug) return toast.error("Link undangan tidak boleh kosong");
+    if (!themeParam)
+      return toast.error("Pilih tema terlebih dahulu di katalog");
 
     create({
       theme_slug: themeParam,

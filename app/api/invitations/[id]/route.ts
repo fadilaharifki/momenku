@@ -84,3 +84,31 @@ export async function PATCH(
     return errorResponse(error.message || "Gagal memperbarui undangan");
   }
 }
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const supabase = await createClientCookies();
+
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) return errorResponse("Unauthorized", 401);
+
+    const { error: deleteError } = await supabase
+      .from("invitations")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (deleteError) throw deleteError;
+
+    return successResponse(null, "Undangan berhasil dihapus");
+  } catch (err: any) {
+    return errorResponse(err.message || "Gagal menghapus undangan");
+  }
+}
