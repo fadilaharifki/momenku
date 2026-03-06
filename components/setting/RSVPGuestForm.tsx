@@ -45,15 +45,13 @@ export default function RSVPGuestDialog({
   rsvpData,
   rsvpCode,
 }: RSVPGuestDialogProps) {
-  const { rsvp_settings, rsvp_status } = rsvpData;
-
   const [showForm, setShowForm] = useState(true);
 
   // Buat Schema Zod secara dinamis berdasarkan rsvp_settings
   const dynamicSchema = useMemo(() => {
     const shape: any = {};
 
-    rsvp_settings?.inputs?.forEach((input: any) => {
+    rsvpData?.rsvp_settings?.inputs?.forEach((input: any) => {
       if (!input.is_published) return;
 
       let fieldSchema = z.string();
@@ -66,7 +64,7 @@ export default function RSVPGuestDialog({
     });
 
     return z.object(shape).superRefine((data, ctx) => {
-      const guestSetting = rsvp_settings?.inputs?.find(
+      const guestSetting = rsvpData?.rsvp_settings?.inputs?.find(
         (i: any) => i.name === "guest_count",
       );
 
@@ -82,7 +80,7 @@ export default function RSVPGuestDialog({
         });
       }
     });
-  }, [rsvp_settings]);
+  }, [rsvpData?.rsvp_settings]);
 
   const {
     register,
@@ -97,7 +95,9 @@ export default function RSVPGuestDialog({
   });
   const attendanceValue = watch("attendance");
 
-  const { data: detailRsvp } = useGetRSVPByCode(rsvpCode);
+  const { data: detailRsvp } = useGetRSVPByCode(rsvpCode, {
+    enabled: !!rsvpCode,
+  });
   const { data: allRsvps } = useGetRSVPs({
     invitation_id: invitationId,
     limit: "all",
@@ -144,7 +144,7 @@ export default function RSVPGuestDialog({
     }
   };
 
-  if (rsvp_status !== 1) return null;
+  if (rsvpData?.rsvp_settings.rsvp_status !== 1) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -204,7 +204,7 @@ export default function RSVPGuestDialog({
             </div>
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {rsvp_settings?.inputs
+              {rsvpData?.rsvp_settings?.inputs
                 ?.filter((i: any) => i.is_published)
                 .map((field: any) => {
                   if (

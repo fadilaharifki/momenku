@@ -1,60 +1,46 @@
-import { notFound } from "next/navigation"
-import type { Metadata } from "next"
-import { ElegantGoldTemplate } from "@/components/templates/elegant-gold"
-import { RusticGardenTemplate } from "@/components/templates/rustic-garden"
-import { ModernLuxuryTemplate } from "@/components/templates/modern-luxury"
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import InvitationPageComponent from "@/components/showing";
 
-const templateData: Record<
-  string,
-  {
-    name: string
-    description: string
-    component: React.ComponentType
-  }
-> = {
-  "elegant-gold": {
-    name: "Elegant Gold",
-    description: "Template undangan digital pernikahan Elegant Gold - Desain klasik dengan sentuhan emas yang mewah.",
-    component: ElegantGoldTemplate,
-  },
-  "rustic-garden": {
-    name: "Rustic Garden",
-    description: "Template undangan digital pernikahan Rustic Garden - Nuansa bohemian dengan aksen botanical.",
-    component: RusticGardenTemplate,
-  },
-  "modern-luxury": {
-    name: "Modern Luxury",
-    description: "Template undangan digital pernikahan Modern Luxury - Desain modern minimalis dengan aksen hitam dan emas.",
-    component: ModernLuxuryTemplate,
-  },
-}
+// 2. Fungsi Fetch Data dari API (Internal atau Direct DB)
+async function getThemeData(slug: string) {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const res = await fetch(`${baseUrl}/api/themes/${slug}`, {
+    next: { revalidate: 1 },
+  });
 
-export async function generateStaticParams() {
-  return Object.keys(templateData).map((slug) => ({ slug }))
+  if (!res.ok) return null;
+  const response = await res.json();
+  return response.data; // Mengasumsikan helper successResponse kamu
 }
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params
-  const template = templateData[slug]
-  if (!template) return { title: "Template Tidak Ditemukan" }
+  const { slug } = await params;
+  const theme = await getThemeData(slug);
+
+  if (!theme) return { title: "Template Tidak Ditemukan" };
+
   return {
-    title: `${template.name} - Template Undangan Digital | MomenKu`,
-    description: template.description,
-  }
+    title: `${theme.name} - Template Undangan | Momenku`,
+    description: theme.description,
+  };
 }
 
 export default async function TemplatePage({
   params,
 }: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params
-  const template = templateData[slug]
-  if (!template) notFound()
-  const TemplateComponent = template.component
-  return <TemplateComponent />
+  const { slug } = await params;
+
+  // 3. Ambil data tema dari API
+  const theme = await getThemeData(slug);
+
+  if (!theme) notFound();
+
+  return <InvitationPageComponent slug={slug} invitation={theme} />;
 }

@@ -46,6 +46,8 @@ import {
 import { useUploadImage } from "@/hooks/api/usePostUploadImage";
 import { useDeleteImage } from "@/hooks/api/useDeleteImage";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+import { CAMERA_PRESETS } from "@/lib/preset-camera";
 
 const LIB_ASSETS = [
   "cartoon_bride.webp",
@@ -63,12 +65,12 @@ const LIB_ASSETS = [
   "BCA.webp",
   "BNI.webp",
 ];
-
 interface Props {
-  id: string;
+  id: string; // invitationId
   section: InvitationSectionInterface;
   onClose?: () => void;
   onDelete?: (id: string) => void;
+  backgroundUrl?: string;
 }
 
 export default function VisualLiveEditor({
@@ -76,19 +78,19 @@ export default function VisualLiveEditor({
   section,
   onClose,
   onDelete,
+  backgroundUrl,
 }: Props) {
   const { mutate, isPending: isLoading } = useUpdateSection(section.id);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [htmlBody, setHtmlBody] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editMode, setEditMode] = useState<"text" | "image">("text");
+  const [editMode, setEditMode] = useState<"text" | "image" | "link">("text");
   const [imageTab, setImageTab] = useState<"upload" | "assets">("upload");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const [editValue, setEditValue] = useState("");
   const [editUrl, setEditUrl] = useState("");
-  const [editLink, setEditLink] = useState(false);
   const [fontSize, setFontSize] = useState("");
   const [textColor, setTextColor] = useState("#000000");
   const [fontFamily, setFontFamily] = useState("Default");
@@ -96,6 +98,10 @@ export default function VisualLiveEditor({
   const [isItalic, setIsItalic] = useState(false);
 
   const [imageUrl, setImageUrl] = useState("");
+
+  // Tentukan preset kamera berdasarkan order (dikurangi 1 karena index mulai 0)
+  const sectionIndex = (section as any).order ? (section as any).order - 1 : 0;
+  const currentCamera = CAMERA_PRESETS[sectionIndex] || CAMERA_PRESETS[0];
 
   const { mutate: uploadImage, isPending: isUploading } = useUploadImage({
     onSuccess: (res) => {
@@ -111,92 +117,146 @@ export default function VisualLiveEditor({
 
   const { mutate: deleteImage } = useDeleteImage();
 
-  // 1. PREPARE HTML (Logic Baru: Kecualikan isi dalam countdown)
   const prepareHtml = (rawHtml: string) => {
     if (!rawHtml) return "";
+
     const parser = new DOMParser();
     const doc = parser.parseFromString(rawHtml, "text/html");
 
+    // Aktifkan AOS
     doc.querySelectorAll("[data-aos]").forEach((el) => {
       el.classList.add("aos-animate");
       (el as HTMLElement).style.transition = "none";
     });
 
-    const textElements = doc.querySelectorAll(
-      "h1, h2, h3, h4, h5, h6, p, span, b, i, a, button, div.editable-node, #countdown-target",
-    );
+    const sectionPrefix = section.id.slice(0, 4);
+
+    /* =========================
+     TEXT (skip yang di dalam LINK)
+  ========================= */
+    const textElements = doc.querySelectorAll(".editable-text");
 
     textElements.forEach((el, index) => {
-      // JANGAN beri class editable pada child di dalam countdown-target
-      if (el.closest("#countdown-target") && el.id !== "countdown-target") {
-        return;
+      const insideLink = el.closest(".editable-link");
+
+      if (!insideLink && !el.id) {
+        el.id = `txt-${sectionPrefix}-${index}`;
       }
 
-      if (
-        el.textContent?.trim() ||
-        el.tagName === "A" ||
-        el.id === "countdown-target"
-      ) {
-        el.classList.add("editable-text-only");
-        if (el.tagName === "A") el.classList.add("editable-link");
-        // Gunakan ID yang sudah ada jika ada (seperti countdown-target), jika tidak buat baru
-        if (!el.id) el.id = `txt-${section.id.slice(0, 4)}-${index}`;
+      // kalau text di dalam link tetap diberi id tapi beda prefix
+      if (insideLink && !el.id) {
+        el.id = `txtlink-${sectionPrefix}-${index}`;
       }
     });
 
-    const imgElements = doc.querySelectorAll("img");
+    /* =========================
+     LINK
+  ========================= */
+    const linkElements = doc.querySelectorAll(".editable-link");
+
+    linkElements.forEach((el, index) => {
+      if (!el.id) {
+        el.id = `lnk-${sectionPrefix}-${index}`;
+      }
+    });
+
+    /* =========================
+     BUTTON
+  ========================= */
+    const buttonElements = doc.querySelectorAll(".editable-button");
+
+    buttonElements.forEach((el, index) => {
+      if (!el.id) {
+        el.id = `btn-${sectionPrefix}-${index}`;
+      }
+    });
+
+    /* =========================
+     IMAGE
+  ========================= */
+    const imgElements = doc.querySelectorAll(".editable-image");
+
     imgElements.forEach((img, index) => {
-      img.classList.add("editable-image");
-      if (!img.id) img.id = `img-${section.id.slice(0, 4)}-${index}`;
+      if (!img.id) {
+        img.id = `img-${sectionPrefix}-${index}`;
+      }
     });
+
+    /* =========================
+     COUNTDOWN
+  ========================= */
+    const countdown = doc.querySelector("#countdown-target");
+
+    if (countdown && !countdown.id) {
+      countdown.id = `count-${sectionPrefix}`;
+    }
 
     return doc.body.innerHTML;
   };
 
-  useEffect(() => {
-    if (section?.body) setHtmlBody(prepareHtml(section.body));
-  }, [section]);
-
-  // 2. HANDLE ELEMENT CLICK (Logic Baru: Ambil data-target)
   const handleElementClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
 
+    /* =========================
+     IMAGE
+  ========================= */
     const imgTarget = target.closest(".editable-image") as HTMLImageElement;
     if (imgTarget) {
       e.preventDefault();
       e.stopPropagation();
+
       setEditMode("image");
       setSelectedId(imgTarget.id);
       setImageUrl(imgTarget.src);
       setIsModalOpen(true);
+
       return;
     }
 
-    const textTarget = target.closest(".editable-text-only") as HTMLElement;
+    /* =========================
+     BUTTON
+  ========================= */
+    const buttonTarget = target.closest(
+      ".editable-button",
+    ) as HTMLButtonElement;
+    if (buttonTarget) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      setEditMode("text");
+      setSelectedId(buttonTarget.id);
+      setEditValue(buttonTarget.textContent?.trim() || "");
+
+      setEditUrl("");
+
+      setIsModalOpen(true);
+      return;
+    }
+
+    /* =========================
+     TEXT (PRIORITAS)
+  ========================= */
+    const textTarget = target.closest(".editable-text") as HTMLElement;
+
     if (textTarget) {
       e.preventDefault();
       e.stopPropagation();
+
       setEditMode("text");
       setSelectedId(textTarget.id);
 
-      // Jika yang diklik adalah countdown, ambil atributnya, bukan teks dalamnya
       if (textTarget.id === "countdown-target") {
         setEditValue(
           textTarget.getAttribute("data-target") || "2025-11-30 08:00:00",
         );
-        setEditLink(false);
       } else {
-        setEditValue(textTarget.innerText.trim());
-        if (textTarget.tagName === "A") {
-          setEditUrl((textTarget as HTMLAnchorElement).href);
-          setEditLink(true);
-        } else {
-          setEditLink(false);
-          setEditUrl("");
-        }
+        setEditValue(textTarget.textContent?.trim() || "");
+
+        setEditUrl("");
       }
 
       const style = window.getComputedStyle(textTarget);
+
       setFontSize(style.fontSize);
       setFontFamily(style.fontFamily.replace(/['"]/g, ""));
       setIsBold(
@@ -205,46 +265,102 @@ export default function VisualLiveEditor({
       setIsItalic(style.fontStyle === "italic");
 
       const rgb = style.color;
-      const hex =
-        "#" +
-        rgb
-          .match(/\d+/g)
-          ?.map((x) => parseInt(x).toString(16).padStart(2, "0"))
-          .join("");
-      setTextColor(hex || "#000000");
+      const rgbMatch = rgb.match(/\d+/g);
+
+      if (rgbMatch) {
+        const hex =
+          "#" +
+          rgbMatch
+            .map((x) => parseInt(x).toString(16).padStart(2, "0"))
+            .join("");
+        setTextColor(hex);
+      } else {
+        setTextColor("#000000");
+      }
+
       setIsModalOpen(true);
+      return;
+    }
+
+    /* =========================
+     LINK (hanya jika bukan text)
+  ========================= */
+    const linkTarget = target.closest(".editable-link") as HTMLAnchorElement;
+
+    if (linkTarget) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      setEditMode("link");
+      setSelectedId(linkTarget.id);
+
+      setEditValue("");
+      setEditUrl(linkTarget.getAttribute("href") || "");
+
+      setIsModalOpen(true);
+
+      return;
     }
   };
+  useEffect(() => {
+    if (section?.body) setHtmlBody(prepareHtml(section.body));
+  }, [section]);
 
-  // 3. APPLY CHANGES (Logic Baru: Update atribut data-target)
-  const handleApplyChanges = () => {
-    if (!selectedId) return;
+  useEffect(() => {
+    if (!selectedId || !isModalOpen) return;
+
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlBody, "text/html");
-    const element = doc.getElementById(selectedId);
+    const element = doc.getElementById(selectedId) as HTMLElement;
 
     if (element) {
-      if (editMode === "text") {
-        if (element.id === "countdown-target") {
-          // UPDATE ATRIBUT, BUKAN INNERHTML
+      if (editMode === "text" || editMode === "link") {
+        // Handle Countdown Target
+        if (element.id.includes("countdown-target")) {
           element.setAttribute("data-target", editValue.trim());
         } else {
-          element.innerHTML = editValue.replace(/\n/g, "<br />");
+          // Update Content
+          if (editValue !== undefined) {
+            element.innerHTML = editValue.replace(/\n/g, "<br />");
+          }
+          // Update Styles
           element.style.fontSize = fontSize;
           element.style.color = textColor;
           element.style.fontWeight = isBold ? "bold" : "normal";
           element.style.fontStyle = isItalic ? "italic" : "normal";
           if (fontFamily !== "Default") element.style.fontFamily = fontFamily;
-          if (element.tagName === "A" && editUrl) {
+
+          // Update Link if element is Anchor
+          if (element.tagName === "A") {
             (element as HTMLAnchorElement).href = editUrl;
           }
         }
-      } else {
+      } else if (editMode === "image") {
         (element as HTMLImageElement).src = imageUrl;
       }
       setHtmlBody(doc.body.innerHTML);
     }
-    setIsModalOpen(false);
+  }, [
+    editValue,
+    editUrl,
+    imageUrl,
+    fontSize,
+    textColor,
+    fontFamily,
+    isBold,
+    isItalic,
+  ]);
+
+  const applyToDatabase = () => {
+    mutate(
+      { body: htmlBody },
+      {
+        onSuccess: () => {
+          onClose?.();
+          setIsModalOpen(false);
+        },
+      },
+    );
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -263,58 +379,40 @@ export default function VisualLiveEditor({
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6 font-poppins">
-      <div className="flex items-center justify-between bg-white p-4 rounded-3xl border border-primary/10 shadow-sm sticky top-0 z-20">
-        <div className="flex items-center gap-4">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="icon" className="rounded-xl">
-                <Trash2 size={18} />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="rounded-4xl">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Hapus Section?</AlertDialogTitle>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-xl">
-                  Batal
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => onDelete?.(section.id)}
-                  className="bg-red-600 rounded-xl"
-                >
-                  Hapus
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <h2 className="text-sm font-black uppercase tracking-tight hidden md:block text-slate-700">
-            Visual Editor
-          </h2>
-        </div>
-        <Button
-          onClick={() => mutate({ body: htmlBody }, { onSuccess: onClose })}
-          disabled={isLoading}
-          className="bg-[#d4af37] text-white rounded-2xl px-8"
-        >
-          {isLoading ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <Save size={18} className="mr-2" />
-          )}{" "}
-          Simpan
-        </Button>
-      </div>
+    <div className="p-4 md:p-6 space-y-6 font-poppins overflow-y-auto">
+      <div className="flex justify-center py-10 rounded-[3rem] border-2 border-dashed border-slate-200">
+        <div className="relative w-[375px] h-[667px] shadow-[0_0_0_12px_#1e293b] rounded-[3rem] bg-black overflow-hidden">
+          {/* CAMERA ROLE PREVIEW (MOMENKU) */}
+          {backgroundUrl && (
+            <div className="absolute inset-0 w-full h-full z-0 pointer-events-none">
+              <motion.img
+                src={backgroundUrl}
+                alt="Camera Preview"
+                initial={false}
+                animate={currentCamera}
+                transition={{ duration: 2, ease: "easeInOut" }}
+                className="w-full h-full object-cover opacity-60"
+              />
+            </div>
+          )}
 
-      <div className="flex justify-center py-10 bg-slate-100/50 rounded-[3rem] border-2 border-dashed border-slate-200">
-        <div className="relative w-[375px] h-[667px] shadow-[0_0_0_12px_#1e293b] rounded-[3rem] bg-[#4a0404] overflow-hidden">
+          {/* VIEWPORT: Menggunakan h-full tanpa absolute agar scroll konteksnya jelas */}
           <div
-            className="preview-viewport h-full w-full overflow-y-auto scrollbar-hide"
+            className="preview-viewport relative z-10 w-full h-full overflow-y-auto overflow-x-hidden scrollbar-hide"
             onClick={handleElementClick}
+            style={{
+              scrollBehavior: "smooth",
+            }}
           >
             <div
-              className="html-content-root h-full"
+              className="html-content-root w-full min-h-full bg-transparent"
+              style={{
+                fontSize: "16px",
+                lineHeight: "normal",
+                WebkitFontSmoothing: "antialiased",
+                display: "block",
+                paddingBottom: "100px",
+              }}
               dangerouslySetInnerHTML={{ __html: htmlBody }}
             />
           </div>
@@ -324,37 +422,111 @@ export default function VisualLiveEditor({
       <style
         dangerouslySetInnerHTML={{
           __html: `
-        #countdown-target.editable-text-only { 
-          outline: 2px dashed #d4af37 !important; 
-          outline-offset: 4px;
-          cursor: pointer;
-          position: relative;
-        }
-        #countdown-target.editable-text-only::after {
-          content: "KLIK UNTUK SET TANGGAL";
-          position: absolute;
-          top: -25px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #d4af37;
-          color: #4a0404;
-          font-size: 9px;
-          padding: 3px 10px;
-          border-radius: 6px;
-          font-weight: 800;
-          white-space: nowrap;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-        .preview-viewport section { height: 667px !important; min-height: 667px !important; }
-        .editable-text-only:hover { outline: 2px solid #d4af37; outline-offset: 2px; cursor: pointer; }
-        .editable-link:hover { outline: 2px dashed #d4af37 !important; background-color: rgba(212, 175, 55, 0.1) !important; cursor: pointer; }
-        .editable-image:hover { outline: 4px solid #d4af37 !important; outline-offset: -4px; cursor: pointer; filter: brightness(0.8); }
-      `,
+/* RESET INTERNAL CONTENT UNTUK EDITOR MOMENKU */
+.html-content-root section,
+.html-content-root .invitation-section { 
+  height: 667px !important; 
+  min-height: 667px !important; 
+  max-height: 667px !important;
+  width: 100% !important;
+  position: relative !important;
+  background-color: transparent !important; 
+  overflow: hidden !important; 
+  display: flex;
+  flex-direction: column;
+}
+
+/* Perbaikan Galeri Scroll */
+.html-content-root .gallery-container,
+.html-content-root .scroll-area {
+  overflow-y: auto !important;
+  max-height: 100% !important;
+}
+
+/* ============================= */
+/* EDITABLE ELEMENT HIGHLIGHT */
+/* ============================= */
+
+.editable-text:hover {
+  outline: 2px solid #d4af37;
+  outline-offset: 2px;
+  cursor: pointer;
+}
+
+.editable-link:hover {
+  outline: 2px dashed #d4af37;
+  background-color: rgba(212, 175, 55, 0.1);
+  cursor: pointer;
+}
+
+.editable-button:hover {
+  outline: 2px solid #d4af37;
+  outline-offset: 2px;
+  cursor: pointer;
+}
+
+.editable-image:hover {
+  outline: 4px solid #d4af37;
+  outline-offset: -4px;
+  cursor: pointer;
+  filter: brightness(0.85);
+}
+
+/* ============================= */
+/* COUNTDOWN EDITOR */
+/* ============================= */
+
+#countdown-target.editable-text {
+  outline: 2px dashed #d4af37 !important;
+  outline-offset: 4px;
+  cursor: pointer;
+  position: relative;
+}
+
+#countdown-target.editable-text::after {
+  content: "KLIK UNTUK SET TANGGAL";
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #d4af37;
+  color: #4a0404;
+  font-size: 9px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  z-index: 50;
+}
+
+/* ============================= */
+/* MATIKAN ANIMASI AOS DI EDITOR */
+/* ============================= */
+
+.html-content-root [data-aos] {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+/* ============================= */
+/* HIDE SCROLLBAR */
+/* ============================= */
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+`,
         }}
       />
-
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-md rounded-[2.5rem] p-0 overflow-hidden font-poppins">
+        <DialogContent className="sm:max-w-md max-h-screen rounded-[2.5rem] p-0 font-poppins overflow-auto">
           <DialogHeader className="p-8 bg-slate-50/80 border-b">
             <DialogTitle className="text-[11px] font-black uppercase tracking-widest flex items-center gap-3">
               <div className="p-2 bg-white rounded-xl shadow-sm">
@@ -366,11 +538,11 @@ export default function VisualLiveEditor({
               </div>
               {selectedId === "countdown-target"
                 ? "Set Target Waktu"
-                : editMode === "text"
-                  ? editUrl
-                    ? "Link & Text Editor"
-                    : "Text Editor"
-                  : "Image Editor"}
+                : editMode === "link"
+                  ? "Link Editor"
+                  : editMode === "text"
+                    ? "Text Editor"
+                    : "Image Editor"}
             </DialogTitle>
           </DialogHeader>
 
@@ -385,7 +557,9 @@ export default function VisualLiveEditor({
                   </Label>
                   <Textarea
                     value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
+                    onChange={(e) => {
+                      setEditValue(e.target.value);
+                    }}
                     placeholder={
                       selectedId === "countdown-target"
                         ? "Contoh: 2025-12-31 08:00:00"
@@ -394,22 +568,6 @@ export default function VisualLiveEditor({
                     className="rounded-2xl bg-slate-50 border-none min-h-25 p-4 focus-visible:ring-[#d4af37]"
                   />
                 </div>
-
-                {editLink && (
-                  <div className="space-y-2 p-4 bg-[#d4af37]/5 rounded-2xl border border-[#d4af37]/20">
-                    <Label className="text-[10px] font-bold uppercase text-[#d4af37] flex items-center gap-2">
-                      <LinkIcon size={14} /> Tautan URL
-                    </Label>
-                    <Input
-                      value={editUrl}
-                      onChange={(e) => setEditUrl(e.target.value)}
-                      className="rounded-xl bg-white border-none h-11 text-[12px]"
-                      placeholder="https://..."
-                    />
-                  </div>
-                )}
-
-                {/* Sembunyikan styling jika edit countdown */}
                 {selectedId !== "countdown-target" && (
                   <>
                     <div className="grid grid-cols-2 gap-4">
@@ -491,113 +649,134 @@ export default function VisualLiveEditor({
                 )}
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="flex bg-slate-100 p-1 rounded-2xl">
-                  <button
-                    onClick={() => setImageTab("upload")}
-                    className={cn(
-                      "flex-1 py-2 text-[10px] font-bold uppercase rounded-xl",
-                      imageTab === "upload"
-                        ? "bg-white text-[#d4af37]"
-                        : "text-slate-400",
-                    )}
-                  >
-                    Upload
-                  </button>
-                  <button
-                    onClick={() => setImageTab("assets")}
-                    className={cn(
-                      "flex-1 py-2 text-[10px] font-bold uppercase rounded-xl",
-                      imageTab === "assets"
-                        ? "bg-white text-[#d4af37]"
-                        : "text-slate-400",
-                    )}
-                  >
-                    Assets
-                  </button>
-                </div>
-                {imageTab === "upload" ? (
-                  <div className="relative aspect-video rounded-4xl overflow-hidden bg-slate-50 border-2 border-dashed border-slate-200 group">
-                    {imageUrl ? (
-                      <>
-                        <img
-                          src={imageUrl}
-                          className="w-full h-full object-contain"
-                          alt="preview"
-                        />
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            onClick={() => fileInputRef.current?.click()}
-                            variant="secondary"
-                            className="rounded-full w-12 h-12 p-0"
-                          >
-                            <Upload size={20} />
-                          </Button>
-                          <Button
-                            onClick={handleRemoveImage}
-                            variant="destructive"
-                            className="rounded-full w-12 h-12 p-0"
-                          >
-                            <Trash2 size={20} />
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="w-full h-full flex flex-col items-center justify-center gap-3 text-slate-400 hover:text-[#d4af37]"
-                      >
-                        <Upload size={32} />
-                        <span className="text-[11px] font-bold uppercase">
-                          Upload
-                        </span>
-                      </button>
-                    )}
-                    {isUploading && (
-                      <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                        <Loader2 className="animate-spin" />
-                      </div>
-                    )}
+              <>
+                {editMode === "link" ? (
+                  <div className="space-y-2 p-4 bg-[#d4af37]/5 rounded-2xl border border-[#d4af37]/20">
+                    <Label className="text-[10px] font-bold uppercase text-[#d4af37] flex items-center gap-2">
+                      <LinkIcon size={14} /> Tautan URL
+                    </Label>
+                    <Input
+                      value={editUrl}
+                      onChange={(e) => setEditUrl(e.target.value)}
+                      className="rounded-xl bg-white border-none h-11 text-[12px]"
+                      placeholder="https://..."
+                    />
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-3 max-h-64 overflow-y-auto scrollbar-hide">
-                    {LIB_ASSETS.map((asset) => (
+                  <div className="space-y-6">
+                    <div className="flex bg-slate-100 p-1 rounded-2xl">
                       <button
-                        key={asset}
-                        onClick={() => setImageUrl(`/assets/${asset}`)}
+                        onClick={() => setImageTab("upload")}
                         className={cn(
-                          "aspect-square rounded-2xl overflow-hidden border-2 p-1 bg-slate-50",
-                          imageUrl === `/assets/${asset}`
-                            ? "border-[#d4af37]"
-                            : "border-transparent",
+                          "flex-1 py-2 text-[10px] font-bold uppercase rounded-xl",
+                          imageTab === "upload"
+                            ? "bg-white text-[#d4af37]"
+                            : "text-slate-400",
                         )}
                       >
-                        <img
-                          src={`/assets/${asset}`}
-                          className="w-full h-full object-contain"
-                          alt={asset}
-                        />
+                        Upload
                       </button>
-                    ))}
+                      <button
+                        onClick={() => setImageTab("assets")}
+                        className={cn(
+                          "flex-1 py-2 text-[10px] font-bold uppercase rounded-xl",
+                          imageTab === "assets"
+                            ? "bg-white text-[#d4af37]"
+                            : "text-slate-400",
+                        )}
+                      >
+                        Assets
+                      </button>
+                    </div>
+                    {imageTab === "upload" ? (
+                      <div className="relative aspect-video rounded-4xl overflow-hidden bg-slate-50 border-2 border-dashed border-slate-200 group">
+                        {imageUrl ? (
+                          <>
+                            <img
+                              src={imageUrl}
+                              className="w-full h-full object-contain"
+                              alt="preview"
+                            />
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                onClick={() => fileInputRef.current?.click()}
+                                variant="secondary"
+                                className="rounded-full w-12 h-12 p-0"
+                              >
+                                <Upload size={20} />
+                              </Button>
+                              <Button
+                                onClick={handleRemoveImage}
+                                variant="destructive"
+                                className="rounded-full w-12 h-12 p-0"
+                              >
+                                <Trash2 size={20} />
+                              </Button>
+                            </div>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full h-full flex flex-col items-center justify-center gap-3 text-slate-400 hover:text-[#d4af37]"
+                          >
+                            <Upload size={32} />
+                            <span className="text-[11px] font-bold uppercase">
+                              Upload
+                            </span>
+                          </button>
+                        )}
+                        {isUploading && (
+                          <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                            <Loader2 className="animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-3 max-h-64 overflow-y-auto scrollbar-hide">
+                        {LIB_ASSETS.map((asset) => (
+                          <button
+                            key={asset}
+                            onClick={() => setImageUrl(`/assets/${asset}`)}
+                            className={cn(
+                              "aspect-square rounded-2xl overflow-hidden border-2 p-1 bg-slate-50",
+                              imageUrl === `/assets/${asset}`
+                                ? "border-[#d4af37]"
+                                : "border-transparent",
+                            )}
+                          >
+                            <img
+                              src={`/assets/${asset}`}
+                              className="w-full h-full object-contain"
+                              alt={asset}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
                   </div>
                 )}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileUpload}
-                  accept="image/*"
-                  className="hidden"
-                />
-              </div>
+              </>
             )}
           </div>
 
           <DialogFooter className="p-8 bg-slate-50/50">
             <Button
-              onClick={handleApplyChanges}
+              onClick={applyToDatabase}
               className="w-full bg-[#4a0404] text-white h-14 rounded-2xl font-bold uppercase text-[11px] flex items-center justify-center gap-2"
             >
-              <Sparkles size={16} /> Simpan Perubahan
+              {isLoading ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <Sparkles size={16} />
+              )}
+              Simpan Perubahan
             </Button>
           </DialogFooter>
         </DialogContent>

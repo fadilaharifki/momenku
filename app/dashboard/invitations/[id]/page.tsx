@@ -307,9 +307,12 @@ export default function ManageInvitationPage() {
       </div>
 
       {/* 5. Floating Action Button Container */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 z-50">
+      {/* <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 z-50">
         <Button
-          onClick={() => setIsLayoutModalOpen(true)}
+          onClick={() => {
+            // setIsLayoutModalOpen(true);
+            futureUnderDev();
+          }}
           className="w-full h-16 bg-primary hover:bg-primary/90 text-white rounded-[2rem] font-black shadow-2xl shadow-primary/40 transition-all active:scale-95 group"
         >
           <div className="flex items-center gap-3 text-sm uppercase tracking-[0.15em]">
@@ -319,7 +322,7 @@ export default function ManageInvitationPage() {
             Tambah Halaman Baru
           </div>
         </Button>
-      </div>
+      </div> */}
 
       {/* Visual Editor Sheet */}
       <Sheet open={isEditorOpen} onOpenChange={setIsEditorOpen}>
@@ -347,9 +350,13 @@ export default function ManageInvitationPage() {
             </SheetTitle>
           </SheetHeader>
 
-          <div className="h-[calc(100vh-80px)] overflow-y-auto bg-slate-50/50">
+          <div className="h-[calc(100vh-80px)] overflow-hidden bg-slate-50/50 flex flex-col">
             {selectedSection && (
-              <VisualLiveEditor id={id as string} section={selectedSection} />
+              <VisualLiveEditor
+                id={id as string}
+                section={selectedSection}
+                backgroundUrl={invitation?.theme?.background_url as string}
+              />
             )}
           </div>
         </SheetContent>
