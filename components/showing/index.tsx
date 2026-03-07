@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import AOS from "aos";
 import "aos/dist/aos.css";
@@ -10,15 +10,22 @@ import { motion } from "framer-motion";
 import { CAMERA_PRESETS } from "@/lib/preset-camera";
 import { toast } from "sonner";
 import { fontFamilyGlobal } from "@/lib/constants/font";
+import { AudioLines, Music, Play } from "lucide-react";
+import MusicPlayer from "./MusicPlayer";
 export default function InvitationPageComponent({
   slug,
   rsvpCode,
   invitation,
 }: any) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const [isOpen, setIsOpen] = useState(false);
   const [isRSVPModalOpen, setIsRSVPModalOpen] = useState(false);
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const [activeSection, setActiveSection] = useState<any | null>(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const musicUrl = invitation?.music_url || invitation?.themes?.music_url;
+  const isMusicActive = invitation?.music_status === 1;
 
   const searchParams = useSearchParams();
   const guestName = searchParams.get("to") || "Nama Tamu";
@@ -189,15 +196,30 @@ export default function InvitationPageComponent({
     return () => clearInterval(timer);
   }, [isOpen, invitation]);
 
-  // --- 5. EVENT HANDLERS ---
   const handleMainClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
+
+    // DETEKSI TOMBOL BUKA UNDANGAN
     if (target.closest(".btn-open-invitation")) {
       setIsOpen(true);
+
+      if (audioRef.current) {
+        audioRef.current
+          .play()
+          .then(() => setIsPlaying(true))
+          .catch(() => {});
+      }
 
       setTimeout(() => {
         AOS.refreshHard();
       }, 1000);
+    }
+
+    if (isOpen && isMusicActive && !isPlaying && audioRef.current?.paused) {
+      audioRef.current
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {});
     }
 
     if (target.closest(".btn-wishes-trigger")) setIsRSVPModalOpen(true);
@@ -231,11 +253,37 @@ export default function InvitationPageComponent({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (isOpen && isMusicActive && audioRef.current) {
+      const playAudio = () => {
+        audioRef.current
+          ?.play()
+          .then(() => setIsPlaying(true))
+          .catch((err) => {
+            console.warn(
+              "Autoplay gagal, mencoba play lagi saat interaksi berikutnya",
+              err,
+            );
+
+            setIsPlaying(false);
+          });
+      };
+
+      playAudio();
+    }
+  }, [isOpen, isMusicActive]);
+
   return (
     <main
       onClick={handleMainClick}
       className="mx-auto max-w-md min-h-screen relative shadow-2xl"
     >
+      <MusicPlayer
+        url={musicUrl}
+        isAutoPlay={isOpen}
+        isMusicActive={isMusicActive}
+      />
+
       {/* BACKGROUND UTAMA */}
       {(invitation?.background_url || invitation.themes.background_url) && (
         <motion.div
