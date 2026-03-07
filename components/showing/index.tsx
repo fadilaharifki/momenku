@@ -40,13 +40,10 @@ export default function InvitationPageComponent({
           navigator.clipboard
             .writeText(textToCopy)
             .then(() => {
-              // Feedback Visual pada Button
               const originalText = btn.innerText;
               btn.innerText = "COPIED!";
-              btn.style.backgroundColor = "#00b894"; // Warna Hijau Sukses
+              btn.style.backgroundColor = "#00b894";
               btn.style.color = "#ffffff";
-
-              // Panggil Toast Premium
               toast.success(`Berhasil menyalin: ${textToCopy}`);
 
               // Reset Button setelah 2 detik
@@ -76,18 +73,18 @@ export default function InvitationPageComponent({
 
   const parseOptions = {
     replace: (domNode: any) => {
+      // 1. Animasi Background tetap pakai motion (karena ini simpel)
       if (
         domNode.name === "img" &&
         domNode.attribs?.class?.includes("momenku-bg-target")
       ) {
         const arah = domNode.attribs["data-animation"] || "zoom-in";
-        const gaya = resepGerak[arah] || resepGerak["zoom-in"];
         return (
           <div className="absolute inset-0 w-full h-full overflow-hidden -z-10">
             <motion.img
               src={domNode.attribs.src}
-              initial={{ scale: 1, x: 0, y: 0 }}
-              animate={gaya}
+              initial={{ scale: 1 }}
+              animate={resepGerak[arah] || resepGerak["zoom-in"]}
               transition={{
                 duration: 20,
                 repeat: Infinity,
@@ -98,6 +95,26 @@ export default function InvitationPageComponent({
             />
           </div>
         );
+      }
+
+      // 2. Suntik Class Animasi Manual ke elemen yang punya data-aos
+      if (domNode.attribs?.["data-aos"]) {
+        const delay = domNode.attribs["data-aos-delay"] || "0";
+        const duration = domNode.attribs["data-aos-duration"] || "1000";
+
+        // Kita tambahkan style transition inline supaya dinamis sesuai data-aos
+        const currentStyle = domNode.attribs.style || "";
+        const newStyle = `
+        ${currentStyle}; 
+        transition: all ${duration}ms ease-out ${delay}ms;
+      `;
+
+        domNode.attribs.style = newStyle;
+        // Tambahkan class penanda
+        domNode.attribs.className =
+          `${domNode.attribs.class || ""} momenku-anim`.trim();
+
+        return undefined; // Lanjutkan render standar tapi dengan class/style baru
       }
     },
   };
@@ -177,8 +194,12 @@ export default function InvitationPageComponent({
     const target = e.target as HTMLElement;
     if (target.closest(".btn-open-invitation")) {
       setIsOpen(true);
-      setTimeout(() => AOS.refresh(), 100);
+
+      setTimeout(() => {
+        AOS.refreshHard();
+      }, 1000);
     }
+
     if (target.closest(".btn-wishes-trigger")) setIsRSVPModalOpen(true);
   };
 
@@ -190,9 +211,25 @@ export default function InvitationPageComponent({
         mirror: true,
         offset: 50,
         easing: "ease-in-out",
+        startEvent: "DOMContentLoaded",
       });
+
+      setTimeout(() => {
+        AOS.refreshHard();
+      }, 500);
     }
   }, [invitation]);
+
+  // --- TRIGGER AOS SAAT DIBUKA ---
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        AOS.refresh();
+        // Paksa browser sadar ada konten baru
+        window.dispatchEvent(new Event("resize"));
+      }, 500);
+    }
+  }, [isOpen]);
 
   return (
     <main
@@ -245,7 +282,8 @@ export default function InvitationPageComponent({
       {/* RENDER SECTIONS */}
       <div className="relative z-10">
         {invitation?.sections?.map((section: any, index: number) => {
-          const processedHtml = section.body.replace("[NAMA_TAMU]", guestName);
+          const processedHtml = section.body.replace("[Nama_Tamu]", guestName);
+
           const isCover = index === 0;
 
           return (
@@ -285,8 +323,19 @@ export default function InvitationPageComponent({
         html {
           scroll-behavior: smooth;
         }
+        [data-aos] {
+          opacity: 0;
+          transition-property: transform, opacity !important;
+        }
+
+        [data-aos].aos-animate {
+          opacity: 1 !important;
+          transform: translate(0) scale(1) !important;
+        }
+
+        /* Khusus Mobile: Kadang AOS butuh bantuan anchor-placement */
         .invitation-section {
-          transition: opacity 0.5s ease;
+          overflow: visible !important; /* Coba ganti ini sementara */
         }
       `}</style>
     </main>
