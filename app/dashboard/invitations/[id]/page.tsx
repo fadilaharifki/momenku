@@ -18,7 +18,10 @@ import {
   Calendar,
 } from "lucide-react";
 
-import { InvitationSectionInterface } from "@/type/invitation";
+import {
+  InvitationInterface,
+  InvitationSectionInterface,
+} from "@/type/invitation";
 
 // Shadcn UI Components
 import { Button } from "@/components/ui/button";
@@ -40,6 +43,7 @@ import { useChangeInvitationStatus } from "@/hooks/api/usePatchChangeInvitationS
 import RSVPSettingEditor from "@/components/setting/RSVP-setting-editor";
 import { toast } from "sonner";
 import { RSVPDataSetting } from "@/type/rsvp";
+import { MusicModal } from "@/components/setting/music-setting";
 
 export default function ManageInvitationPage() {
   const router = useRouter();
@@ -55,6 +59,7 @@ export default function ManageInvitationPage() {
   const [selectSectionId, setSelectSectionId] = useState("");
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isRSVPEditorOpen, setIsRSVPEditorOpen] = useState(false);
+  const [openMusicSetting, setOpenMusicSetting] = useState(false);
   const [selectedSection, setSelectedSection] =
     useState<InvitationSectionInterface | null>(null);
   const [isLayoutModalOpen, setIsLayoutModalOpen] = useState(false);
@@ -84,7 +89,7 @@ export default function ManageInvitationPage() {
         icon: Music,
         color: "text-amber-500",
         bg: "bg-amber-50",
-        onClick: () => futureUnderDev(),
+        onClick: () => setOpenMusicSetting(true),
       },
       {
         name: "Background",
@@ -373,6 +378,12 @@ export default function ManageInvitationPage() {
         onClose={() => setIsRSVPEditorOpen(false)}
         initialData={invitation?.settings as RSVPDataSetting}
         id={invitation?.id as string}
+      />
+
+      <MusicModal
+        open={openMusicSetting}
+        invitation={invitation as InvitationInterface}
+        onClose={() => setOpenMusicSetting(false)}
       />
     </div>
   );
