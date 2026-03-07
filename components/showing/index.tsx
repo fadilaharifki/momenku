@@ -9,6 +9,7 @@ import parse from "html-react-parser";
 import { motion } from "framer-motion";
 import { CAMERA_PRESETS } from "@/lib/preset-camera";
 import { toast } from "sonner";
+import { fontFamilyGlobal } from "@/lib/constants/font";
 export default function InvitationPageComponent({
   slug,
   rsvpCode,
@@ -280,6 +281,7 @@ export default function InvitationPageComponent({
       )}
 
       <style jsx global>{`
+        ${fontFamilyGlobal}
         html {
           scroll-behavior: smooth;
         }

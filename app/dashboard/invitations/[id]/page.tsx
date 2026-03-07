@@ -330,9 +330,9 @@ export default function ManageInvitationPage() {
           side="right"
           className="w-full sm:max-w-[95%] md:max-w-2xl p-0 border-none shadow-2xl"
         >
-          <SheetHeader className="p-6 border-b bg-white/80 backdrop-blur-md sticky top-0 z-10">
+          <SheetHeader className="py-2 px-6 border-b bg-white/80 backdrop-blur-md sticky top-0 z-10">
             <SheetTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-3 text-primary font-black uppercase tracking-widest text-xs">
+              <div className="flex items-center gap-3 text-primary font-bold uppercase tracking-widest text-xs">
                 <div className="p-2 rounded-xl bg-primary/10">
                   <Sparkles className="w-4 h-4 text-primary" />
                 </div>
@@ -343,7 +343,7 @@ export default function ManageInvitationPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsEditorOpen(false)}
-                className="rounded-full font-bold text-xs uppercase text-muted-foreground"
+                className="rounded-full font-semibold text-xs uppercase text-muted-foreground"
               >
                 Close
               </Button>

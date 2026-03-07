@@ -1,0 +1,2 @@
+export const fontFamilyGlobal =
+  "@import url('https://fonts.googleapis.com/css2?family=Alex+Brush&family=Allura&family=Birthstone&family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@400;700&family=Great+Vibes&family=Herr+Von+Muellerhoff&family=Monsieur+La+Doulaise&family=Montserrat:wght@400;700&family=Parisienne&family=Pinyon+Script&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Poppins:wght@400;700&family=Sacramento&display=swap');";
