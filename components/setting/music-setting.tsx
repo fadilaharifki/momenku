@@ -6,7 +6,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -17,11 +16,14 @@ import {
   Loader2,
   Music as MusicIcon,
   CheckCircle2,
+  UploadCloud,
+  ExternalLink,
 } from "lucide-react";
 import { InvitationInterface } from "@/type/invitation";
 import { useUpdateInvitation } from "@/hooks/api/usePatchUpdateInvitation";
 import { useInView } from "react-intersection-observer";
 import { useDebounce } from "@/hooks/use-debounce";
+import { toast } from "sonner";
 
 import {
   Select,
@@ -31,6 +33,8 @@ import {
   SelectValue,
 } from "../ui/select";
 import { useGetMusics } from "@/hooks/api/useGetMusics";
+import { useUploadMusic } from "@/hooks/api/usePostUploadMusic";
+import ReactPlayer from "react-player";
 
 export function MusicModal({
   open,
@@ -45,17 +49,26 @@ export function MusicModal({
   const [searchTerm, setSearchTerm] = React.useState("");
   const [debouncedSearch] = useDebounce(searchTerm, 500);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
-  const [inputUrl, setInputUrl] = React.useState(invitation.music_url || "");
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [inputUrl, setInputUrl] = React.useState("");
 
-  const audioPreviewRef = React.useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const { ref, inView } = useInView();
-  const { mutate, isPending: isUpdating } = useUpdateInvitation();
+  const { mutate: updateInvitation, isPending: isUpdating } =
+    useUpdateInvitation();
 
-  // Infinite Query
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useGetMusics({
       keyword: debouncedSearch,
       limit: 10,
+    });
+
+  const { mutateAsync: uploadMusic, isPending: isUploadingFile } =
+    useUploadMusic({
+      onSuccess: () => toast.success("Musik berhasil diunggah!"),
+      onError: (err: any) =>
+        toast.error(err.response?.data?.message || "Gagal upload"),
     });
 
   const musics = data?.pages.flatMap((page) => page.data) || [];
@@ -64,55 +77,95 @@ export function MusicModal({
     if (inView && hasNextPage) fetchNextPage();
   }, [inView, hasNextPage, fetchNextPage]);
 
+  React.useEffect(() => {
+    if (!open) {
+      setPreviewId(null);
+      setPreviewUrl(null);
+    }
+  }, [open]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("audio/"))
+      return toast.error("Harus file audio!");
+    if (file.size > 5 * 1024 * 1024) return toast.error("Maksimal 5MB");
+
+    try {
+      await uploadMusic({ file, invitationId: invitation.id });
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (error) {}
+  };
+
   const handlePreview = (id: string, url: string) => {
     if (previewId === id) {
-      audioPreviewRef.current?.pause();
       setPreviewId(null);
+      setPreviewUrl(null);
     } else {
-      if (audioPreviewRef.current) {
-        audioPreviewRef.current.src = url;
-        audioPreviewRef.current
-          .play()
-          .catch(() => console.error("Preview blocked"));
-        setPreviewId(id);
-      }
+      setPreviewId(id);
+      setPreviewUrl(url);
     }
   };
 
-  const handleSaveMusic = (url: string, id: string | null = null) => {
-    mutate({
+  const handleSaveMusic = (url: string) => {
+    const urlPattern = /^(https?:\/\/)/;
+    if (!urlPattern.test(url)) {
+      return toast.error("Masukkan link URL yang valid (http/https)");
+    }
+
+    updateInvitation({
       id: invitation.id,
-      payload: {
-        music_url: url,
-        music_status: 1,
-      },
+      payload: { music_url: url, music_status: 1 },
     });
   };
 
+  const currentMusicUrl = invitation.music_url;
+  const isCurrentYT =
+    currentMusicUrl?.includes("youtube.com") ||
+    currentMusicUrl?.includes("youtu.be");
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="p-0 overflow-hidden max-w-md gap-0 border-none">
-        <audio
-          ref={audioPreviewRef}
-          onEnded={() => setPreviewId(null)}
-          className="hidden"
-        />
+      <DialogContent className="p-0 overflow-hidden max-w-md gap-0 border-none shadow-2xl">
+        <div className="hidden">
+          {previewUrl && (
+            <ReactPlayer
+              src={previewUrl}
+              playing={!!previewId}
+              volume={0.8}
+              width="0px"
+              height="0px"
+              onEnded={() => {
+                setPreviewId(null);
+                setPreviewUrl(null);
+              }}
+            />
+          )}
+        </div>
 
         <DialogHeader className="p-6 pb-4 border-b bg-white">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
-            <MusicIcon className="size-5 text-teal-600" />
+            <div className="p-2 bg-teal-50 rounded-lg">
+              <MusicIcon className="size-5 text-teal-600" />
+            </div>
             Pengaturan Musik
           </DialogTitle>
         </DialogHeader>
 
-        <div className="p-6 space-y-6 bg-slate-50/50 max-h-[75vh] overflow-y-auto">
-          {/* TOGGLE STATUS */}
-          <div className="flex items-center justify-between p-4 border rounded-xl bg-white shadow-sm">
-            <span className="text-sm font-bold">Musik Latar</span>
+        <div className="p-6 space-y-6 bg-slate-50/50 max-h-[70vh] overflow-y-auto custom-scrollbar">
+          <div className="flex items-center justify-between p-4 border rounded-2xl bg-white shadow-sm transition-all hover:shadow-md">
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-slate-800">
+                Aktifkan Musik
+              </span>
+              <span className="text-[10px] text-slate-500 font-medium">
+                Musik akan berputar otomatis saat undangan dibuka
+              </span>
+            </div>
             <Switch
               checked={invitation.music_status === 1}
               onCheckedChange={(checked) => {
-                mutate({
+                updateInvitation({
                   id: invitation.id,
                   payload: { music_status: checked ? 1 : 0 },
                 });
@@ -120,25 +173,23 @@ export function MusicModal({
             />
           </div>
 
-          {/* SELECT SOURCE */}
-          <div className="space-y-2">
-            <label className="text-[11px] font-bold uppercase text-muted-foreground ml-1">
-              Pilih Sumber
+          <div className="space-y-3">
+            <label className="text-[11px] font-bold uppercase text-slate-400 tracking-wider ml-1">
+              Sumber Musik
             </label>
             <Select value={source} onValueChange={setSource}>
-              <SelectTrigger className="w-full h-12 bg-white rounded-xl shadow-sm">
+              <SelectTrigger className="w-full h-12 bg-white rounded-2xl border-slate-200 shadow-sm focus:ring-teal-500">
                 <SelectValue placeholder="Pilih Sumber Musik" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-xl">
                 <SelectItem value="default">Koleksi Momenku</SelectItem>
-                <SelectItem value="external">
-                  Link YouTube / MP3 External
-                </SelectItem>
+                <SelectItem value="upload">Upload File MP3</SelectItem>
+                <SelectItem value="external">Link YouTube</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {source === "default" ? (
+          {source === "default" && (
             <div className="space-y-4 animate-in fade-in duration-300">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-slate-400" />
@@ -146,12 +197,12 @@ export function MusicModal({
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Cari lagu..."
-                  className="w-full py-3 pl-11 pr-4 text-sm bg-white border rounded-xl outline-none focus:border-teal-500 shadow-sm"
+                  placeholder="Cari lagu romantis..."
+                  className="w-full py-3.5 pl-11 pr-4 text-sm bg-white border border-slate-200 rounded-2xl outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5 shadow-sm transition-all"
                 />
               </div>
 
-              <div className="space-y-2 max-h-[280px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="space-y-2 max-h-62.5 overflow-y-auto pr-2 custom-scrollbar">
                 {isLoading && (
                   <div className="flex justify-center py-10">
                     <Loader2 className="animate-spin text-teal-500" />
@@ -160,10 +211,11 @@ export function MusicModal({
 
                 {musics.map((music, i) => {
                   const isUsed = invitation.music_url === music?.music_url;
+                  const isPlayingThis = previewId === music?.id;
                   return (
                     <div
                       key={i}
-                      className={`flex items-center justify-between p-3 rounded-xl border transition-all ${isUsed ? "bg-teal-50 border-teal-200" : "bg-white border-slate-100"}`}
+                      className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${isUsed ? "bg-teal-50 border-teal-200" : "bg-white border-slate-100 hover:border-slate-300"}`}
                     >
                       <div className="flex items-center gap-3 overflow-hidden">
                         <Button
@@ -175,9 +227,9 @@ export function MusicModal({
                               music?.music_url as string,
                             )
                           }
-                          className={`size-9 rounded-full ${previewId === music?.id ? "bg-teal-500 text-white" : "bg-slate-100"}`}
+                          className={`size-10 rounded-full shrink-0 ${isPlayingThis ? "bg-teal-500 text-white hover:bg-teal-600" : "bg-slate-100 hover:bg-slate-200"}`}
                         >
-                          {previewId === music?.id ? (
+                          {isPlayingThis ? (
                             <Pause className="size-4 fill-current" />
                           ) : (
                             <Play className="size-4 fill-current ml-0.5" />
@@ -189,26 +241,22 @@ export function MusicModal({
                           >
                             {music?.title}
                           </span>
-                          <span className="text-[10px] text-slate-400 truncate">
-                            {music?.author || "Original Audio"}
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {music?.author || "Koleksi Momenku"}
                           </span>
                         </div>
                       </div>
-
                       <Button
                         disabled={isUsed || isUpdating}
                         onClick={() =>
-                          handleSaveMusic(music?.music_url as string, music?.id)
+                          handleSaveMusic(music?.music_url as string)
                         }
                         size="sm"
-                        className={`h-8 px-4 text-[10px] font-bold rounded-lg ${isUsed ? "bg-teal-600 text-white" : "border-teal-500 text-teal-600 hover:bg-teal-50"}`}
+                        className={`h-9 px-4 text-[11px] font-bold rounded-xl transition-all ${isUsed ? "bg-teal-600 text-white" : "border-teal-500 text-teal-600 hover:bg-teal-50"}`}
                         variant={isUsed ? "default" : "outline"}
                       >
-                        {isUsed ? (
-                          <CheckCircle2 className="size-3" />
-                        ) : (
-                          "Gunakan"
-                        )}
+                        {isUsed && <CheckCircle2 className="size-3.5 mr-1" />}
+                        {isUsed ? "Aktif" : "Gunakan"}
                       </Button>
                     </div>
                   );
@@ -218,38 +266,113 @@ export function MusicModal({
                   className="h-10 flex items-center justify-center"
                 >
                   {isFetchingNextPage && (
-                    <Loader2 className="size-4 animate-spin text-slate-300" />
+                    <Loader2 className="size-5 animate-spin text-teal-300" />
                   )}
                 </div>
               </div>
             </div>
-          ) : (
+          )}
+
+          {source === "upload" && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold uppercase text-slate-500 ml-1">
-                  Link URL (YouTube/MP3)
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept="audio/mpeg,audio/wav,audio/x-m4a"
+                className="hidden"
+              />
+              <div
+                onClick={() =>
+                  !isUploadingFile && fileInputRef.current?.click()
+                }
+                className="flex flex-col items-center justify-center p-10 border-2 border-dashed border-teal-200 rounded-3xl bg-white hover:bg-teal-50/50 cursor-pointer transition-all group active:scale-95"
+              >
+                {isUploadingFile ? (
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="size-12 text-teal-500 animate-spin mb-3" />
+                    <p className="text-sm font-bold text-teal-600">
+                      Sedang mengunggah...
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="p-4 bg-teal-50 rounded-2xl mb-4 group-hover:scale-110 transition-transform">
+                      <UploadCloud className="size-8 text-teal-500" />
+                    </div>
+                    <p className="text-sm font-bold text-slate-700">
+                      Klik untuk upload MP3
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Maksimal file 5MB
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {source === "external" && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+              <div className="space-y-3">
+                <label className="text-[11px] font-bold uppercase text-slate-400 ml-1">
+                  URL YouTube
                 </label>
-                <textarea
-                  value={inputUrl}
-                  onChange={(e) => setInputUrl(e.target.value)}
-                  className="w-full h-28 p-4 text-sm bg-white border rounded-xl focus:border-teal-500 outline-none resize-none shadow-sm transition-all"
-                  placeholder="Contoh: https://www.youtube.com/watch?v=..."
-                />
+                <div className="relative">
+                  <ExternalLink className="absolute left-4 top-4 size-4 text-slate-400" />
+                  <textarea
+                    value={inputUrl}
+                    onChange={(e) => setInputUrl(e.target.value)}
+                    className="w-full h-24 p-4 pl-11 text-sm bg-white border border-slate-200 rounded-2xl focus:border-teal-500 focus:ring-4 focus:ring-teal-500/5 outline-none resize-none shadow-sm transition-all font-medium"
+                    placeholder="Contoh: https://www.youtube.com/watch?v=..."
+                  />
+                </div>
               </div>
               <Button
-                onClick={() => handleSaveMusic(inputUrl, null)}
+                onClick={() => handleSaveMusic(inputUrl)}
                 disabled={isUpdating || !inputUrl}
-                className="w-full h-12 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl"
+                className="w-full h-12 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-2xl shadow-lg shadow-teal-500/20 transition-all active:scale-95"
               >
                 {isUpdating ? (
                   <Loader2 className="animate-spin" />
                 ) : (
-                  "Simpan Link"
+                  "Simpan & Terapkan"
                 )}
               </Button>
             </div>
           )}
         </div>
+
+        {currentMusicUrl && (
+          <div className="p-4 bg-white border-t border-slate-100 flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+            <div className="flex items-center gap-3 overflow-hidden">
+              <Button
+                size="icon"
+                variant="ghost"
+                className={`size-10 rounded-full shrink-0 ${previewId === "current" ? "bg-orange-500 text-white" : "bg-orange-100 text-orange-600"}`}
+                onClick={() => handlePreview("current", currentMusicUrl)}
+              >
+                {previewId === "current" ? (
+                  <Pause size={18} />
+                ) : (
+                  <Play size={18} className="ml-0.5" />
+                )}
+              </Button>
+              <div className="flex flex-col truncate">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                  Musik Aktif Saat Ini
+                </span>
+                <span className="text-[12px] font-bold text-slate-700 truncate max-w-50">
+                  {isCurrentYT
+                    ? "🎵 Music Now"
+                    : decodeURIComponent(
+                        currentMusicUrl.split("?")[0].split("/").pop() || "",
+                      )}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
