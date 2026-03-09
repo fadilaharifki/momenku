@@ -45,7 +45,7 @@ export default function RootLayout({
       className={`${poppins.variable} ${playfair.variable}`}
       suppressHydrationWarning
     >
-      <body className="font-sans antialiased">
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
         <Analytics />
         <Toaster richColors position="top-right" />
