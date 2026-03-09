@@ -8,8 +8,9 @@ export interface Theme {
   description: string | null;
   styles: string | null;
   frame: string | null;
-  is_premium: number;
-  is_active: number;
+  is_premium: boolean;
+  is_active: boolean;
+  is_music: boolean;
   version: number;
   image_url: string | null;
   background_url: string | null;

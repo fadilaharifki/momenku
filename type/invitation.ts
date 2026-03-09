@@ -35,9 +35,13 @@ export interface InvitationInterface {
   secondary_image_url: string | null;
   music: string | null;
   music_url: string | null;
-  music_status: number;
+  music_status: boolean;
   music_type: number;
   music_embed: string | null;
+
+  background_url: string | null;
+  custom_background_url: string | null;
+  is_custom_background_url: boolean;
 
   // Event Info
   first_event_date: string | null;

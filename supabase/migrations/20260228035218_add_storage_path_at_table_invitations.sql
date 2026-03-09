@@ -9,18 +9,22 @@ CREATE OR REPLACE FUNCTION create_invitation_with_sections(
     p_theme_id UUID,
     p_domain VARCHAR,
     p_settings JSONB,
-    p_storage_path TEXT -- Tambahkan parameter baru di sini
+    p_background_url TEXT,
+    p_music_url TEXT,
+    p_storage_path TEXT
 ) RETURNS SETOF invitations AS $$
 DECLARE
     v_invitation_id UUID;
 BEGIN
-    -- 1. Insert ke tabel invitations dengan kolom storage_path baru
+    -- 1. Insert ke tabel invitations termasuk kolom background_url
     INSERT INTO invitations (
         user_id, 
         theme_id, 
         domain, 
         settings, 
-        storage_path, -- Masukkan ke kolom baru
+        background_url, 
+        music_url, 
+        storage_path,
         is_active
     )
     VALUES (
@@ -28,12 +32,14 @@ BEGIN
         p_theme_id, 
         p_domain, 
         p_settings, 
+        p_background_url,
+        p_music_url, 
         p_storage_path, 
         1
     )
     RETURNING id INTO v_invitation_id;
 
-    -- 2. Copy dari theme_sections ke invitation_sections (termasuk layout_id)
+    -- 2. Copy dari theme_sections ke invitation_sections
     INSERT INTO invitation_sections (
         invitation_id, 
         layout_id,

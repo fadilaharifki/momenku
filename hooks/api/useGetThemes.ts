@@ -8,6 +8,7 @@ interface GetThemesParams {
   category_id?: string;
   page?: number;
   limit?: number | "all";
+  isActive?: boolean;
 }
 
 export function useGetThemes(
@@ -26,6 +27,7 @@ export function useGetThemes(
           category_id: params?.category_id,
           page: params?.page,
           limit: params?.limit,
+          isActive: params?.isActive,
         },
       });
       return data;

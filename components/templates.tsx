@@ -13,6 +13,7 @@ export function Templates() {
     error,
   } = useGetThemes({
     limit: "all",
+    isActive: true,
   });
 
   const themes = response?.data || [];
@@ -68,16 +69,16 @@ export function Templates() {
             {themes.map((theme) => (
               <div
                 key={theme.id}
-                className="group relative flex flex-col rounded-[2rem] border border-border bg-card transition-all duration-500 hover:border-primary/20 hover:shadow-[0_20px_50px_rgba(82,115,95,0.1)] overflow-hidden"
+                className="group relative flex flex-col rounded-4xl border border-border bg-card transition-all duration-500 hover:border-primary/20 hover:shadow-[0_20px_50px_rgba(82,115,95,0.1)] overflow-hidden"
               >
                 {/* Is Premium Badge */}
-                {theme.is_premium === 1 && (
+                {theme.is_premium && (
                   <div className="absolute top-5 left-5 z-20 rounded-full bg-accent px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-accent-foreground shadow-lg">
                     Premium
                   </div>
                 )}
 
-                <div className="relative aspect-[4/5] overflow-hidden">
+                <div className="relative aspect-4/5 overflow-hidden">
                   <Image
                     src={theme.image_url || "/placeholder-theme.jpg"}
                     alt={theme.name}
@@ -85,7 +86,7 @@ export function Templates() {
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
                   />
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-8 translate-y-4 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
                     <Button

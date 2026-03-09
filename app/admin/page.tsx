@@ -146,7 +146,6 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {/* Stats grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.label} className="border-border bg-card">

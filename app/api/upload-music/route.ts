@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       .from("invitations")
       .update({
         music_url: publicUrl,
-        music_status: 1,
+        music_status: true,
       })
       .eq("id", invitationId);
 

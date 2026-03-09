@@ -44,6 +44,7 @@ import RSVPSettingEditor from "@/components/setting/RSVP-setting-editor";
 import { toast } from "sonner";
 import { RSVPDataSetting } from "@/type/rsvp";
 import { MusicModal } from "@/components/setting/music-setting";
+import { BackgroundModal } from "@/components/setting/background-setting";
 
 export default function ManageInvitationPage() {
   const router = useRouter();
@@ -60,6 +61,7 @@ export default function ManageInvitationPage() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isRSVPEditorOpen, setIsRSVPEditorOpen] = useState(false);
   const [openMusicSetting, setOpenMusicSetting] = useState(false);
+  const [openBackgroundSetting, setBackgroundMusicSetting] = useState(false);
   const [selectedSection, setSelectedSection] =
     useState<InvitationSectionInterface | null>(null);
   const [isLayoutModalOpen, setIsLayoutModalOpen] = useState(false);
@@ -96,7 +98,7 @@ export default function ManageInvitationPage() {
         icon: ImageIcon,
         color: "text-rose-500",
         bg: "bg-rose-50",
-        onClick: () => futureUnderDev(),
+        onClick: () => setBackgroundMusicSetting(true),
       },
       {
         name: "RSVP",
@@ -384,6 +386,12 @@ export default function ManageInvitationPage() {
         open={openMusicSetting}
         invitation={invitation as InvitationInterface}
         onClose={() => setOpenMusicSetting(false)}
+      />
+
+      <BackgroundModal
+        open={openBackgroundSetting}
+        invitation={invitation as InvitationInterface}
+        onClose={() => setBackgroundMusicSetting(false)}
       />
     </div>
   );

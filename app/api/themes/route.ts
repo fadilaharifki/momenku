@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const keyword = searchParams.get("keyword");
     const page = parseInt(searchParams.get("page") || "1");
     const limitParam = searchParams.get("limit");
+    const isActiveParam = searchParams.get("isActive");
     const isGetAll = limitParam === "all";
     const limit = isGetAll ? 999999 : parseInt(limitParam || "10");
 
@@ -25,6 +26,10 @@ export async function GET(request: NextRequest) {
     `,
       { count: "exact" },
     );
+
+    if (isActiveParam !== null) {
+      query = query.eq("is_active", isActiveParam === "true");
+    }
 
     if (category_id) {
       query = query.eq("category_id", category_id);

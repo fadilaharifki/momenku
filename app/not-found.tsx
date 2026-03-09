@@ -10,12 +10,10 @@ export default function NotFound() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 font-poppins relative overflow-hidden">
-      {/* Dekorasi Background - Lingkaran Halus */}
-      <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[100px]" />
-      <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px]" />
+      <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-125 h-125 bg-primary/5 rounded-full blur-[100px]" />
+      <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/4 w-100 h-100 bg-accent/5 rounded-full blur-[100px]" />
 
       <div className="relative z-10 text-center space-y-8 max-w-2xl">
-        {/* Kontainer Ikon & Angka */}
         <div className="relative inline-block">
           <h1 className="text-[150px] md:text-[200px] font-black leading-none text-primary/10 tracking-tighter">
             404
@@ -30,7 +28,6 @@ export default function NotFound() {
           </div>
         </div>
 
-        {/* Pesan Kesalahan */}
         <div className="space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent/10 border border-accent/20">
             <Sparkles className="h-4 w-4 text-accent" />
@@ -49,7 +46,6 @@ export default function NotFound() {
           </p>
         </div>
 
-        {/* Tombol Aksi */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
           <Button
             onClick={() => router.back()}
@@ -69,7 +65,6 @@ export default function NotFound() {
           </Button>
         </div>
 
-        {/* Sitemap Hint Ringkas */}
         <div className="pt-12 flex flex-wrap justify-center gap-6 opacity-60">
           <Link
             href="/templates"
@@ -92,7 +87,6 @@ export default function NotFound() {
         </div>
       </div>
 
-      {/* Footer Branding */}
       <p className="absolute bottom-8 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.4em]">
         © 2026 MomenKu - Digital Invitation
       </p>

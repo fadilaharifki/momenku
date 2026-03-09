@@ -98,10 +98,15 @@ export default function RSVPGuestDialog({
   const { data: detailRsvp } = useGetRSVPByCode(rsvpCode, {
     enabled: !!rsvpCode,
   });
-  const { data: allRsvps } = useGetRSVPs({
-    invitation_id: invitationId,
-    limit: "all",
-  });
+  const { data: allRsvps } = useGetRSVPs(
+    {
+      invitation_id: invitationId,
+      limit: "all",
+    },
+    {
+      enabled: !!invitationId,
+    },
+  );
 
   const { mutate: handleSave, isPending: loadingSave } =
     usePostRSVP(invitationId);

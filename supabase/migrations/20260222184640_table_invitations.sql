@@ -15,9 +15,13 @@ CREATE TABLE invitations (
     secondary_image_url TEXT,
     music VARCHAR(255),
     music_url TEXT,
-    music_status SMALLINT DEFAULT 1,
+    music_status BOOLEAN DEFAULT TRUE,
     music_type SMALLINT DEFAULT 0,
     music_embed TEXT,
+
+    backgroud_url TEXT,
+    custom_background_url TEXT,
+    is_custom_background_url BOOLEAN DEFAULT FALSE,
     
     -- Event Info
     first_event_date DATE,

@@ -3,7 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const isPublicApi = pathname.startsWith("/api/invitations/ready");
+  const isPublicApi =
+    pathname.startsWith("/api/invitations/ready") ||
+    pathname.startsWith("/api/themes");
 
   let response = NextResponse.next({
     request: { headers: request.headers },
@@ -55,7 +57,6 @@ export async function proxy(request: NextRequest) {
   const isLoginPage = pathname === "/login" || pathname === "/register";
   const isDashboardPage = pathname.startsWith("/dashboard");
   const isAdminPage = pathname.startsWith("/admin");
-  const isHomePage = pathname === "/home";
   const isRoot = pathname === "/";
 
   // --- LOGIC RULES ---

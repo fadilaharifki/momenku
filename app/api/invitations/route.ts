@@ -20,13 +20,14 @@ export async function POST(request: NextRequest) {
 
     const { data: theme, error: themeError } = await supabase
       .from("themes")
-      .select("id")
+      .select("id, background_url, music_url")
       .eq("slug", theme_slug)
       .single();
 
     if (themeError || !theme) return errorResponse("Tema tidak ditemukan", 404);
 
     const storagePath = `client/${domain}`;
+    console.log(theme, "theme");
 
     const { data, error } = await supabase
       .rpc("create_invitation_with_sections", {
@@ -34,6 +35,8 @@ export async function POST(request: NextRequest) {
         p_theme_id: theme.id,
         p_domain: domain,
         p_settings: DEFAULT_INVITATION_SETTINGS,
+        p_background_url: theme.background_url,
+        p_music_url: theme.music_url,
         p_storage_path: storagePath,
       })
       .single();

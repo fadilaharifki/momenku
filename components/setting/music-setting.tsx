@@ -115,7 +115,7 @@ export function MusicModal({
 
     updateInvitation({
       id: invitation.id,
-      payload: { music_url: url, music_status: 1 },
+      payload: { music_url: url, music_status: true },
     });
   };
 
@@ -163,11 +163,11 @@ export function MusicModal({
               </span>
             </div>
             <Switch
-              checked={invitation.music_status === 1}
+              checked={invitation.music_status === true}
               onCheckedChange={(checked) => {
                 updateInvitation({
                   id: invitation.id,
-                  payload: { music_status: checked ? 1 : 0 },
+                  payload: { music_status: checked },
                 });
               }}
             />

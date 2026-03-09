@@ -10,7 +10,6 @@ import { motion } from "framer-motion";
 import { CAMERA_PRESETS } from "@/lib/preset-camera";
 import { toast } from "sonner";
 import { fontFamilyGlobal } from "@/lib/constants/font";
-import { AudioLines, Music, Play } from "lucide-react";
 import MusicPlayer from "./MusicPlayer";
 export default function InvitationPageComponent({
   slug,
@@ -24,8 +23,8 @@ export default function InvitationPageComponent({
   const [activeSectionIndex, setActiveSectionIndex] = useState(0);
   const [activeSection, setActiveSection] = useState<any | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
-  const musicUrl = invitation?.music_url || invitation?.themes?.music_url;
-  const isMusicActive = invitation?.music_status === 1;
+  const musicUrl = invitation?.music_url;
+  const isMusicActive = invitation?.music_status;
 
   const searchParams = useSearchParams();
   const guestName = searchParams.get("to") || "Nama Tamu";
@@ -285,13 +284,17 @@ export default function InvitationPageComponent({
       />
 
       {/* BACKGROUND UTAMA */}
-      {(invitation?.background_url || invitation.themes.background_url) && (
+      {(invitation?.background_url || invitation?.custom_background_url) && (
         <motion.div
           className="fixed inset-0 w-full h-full z-0 overflow-hidden pointer-events-none max-w-md mx-auto"
           transition={{ duration: 1 }}
         >
           <motion.img
-            src={invitation.background_url || invitation.themes.background_url}
+            src={
+              invitation?.is_custom_background_url
+                ? invitation?.custom_background_url
+                : invitation.background_url
+            }
             alt="Main Background Camera"
             initial={false}
             animate={CAMERA_PRESETS[activeSectionIndex] || CAMERA_PRESETS[5]}
@@ -358,7 +361,7 @@ export default function InvitationPageComponent({
 
       {invitation && (
         <RSVPGuestDialog
-          invitationId={invitation.id}
+          invitationId={invitation.theme_id ? invitation.id : null}
           isOpen={isRSVPModalOpen}
           onClose={() => setIsRSVPModalOpen(false)}
           rsvpData={invitation.settings}
